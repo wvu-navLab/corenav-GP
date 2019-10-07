@@ -1,0 +1,75 @@
+init:
+  position:
+    x: 0.691949695095547
+    y: -1.395750757746275
+    z: 312.2643980319930
+    covx: 1.218469679146834e-14
+    covy: 1.218469679146834e-14
+    covz: 0.010000000000000
+  velocity:
+    x: 0.0
+    y: 0.0
+    z: 0.0
+    covx: 4.000000000000001e-07
+    covy: 4.000000000000001e-07
+    covz: 4.000000000000001e-07
+
+  orientation:
+    x: 0.0
+    y: 0.0
+    z: 0.0
+    covx: 1.218469679146834e-06
+    covy: 1.218469679146834e-06
+    covz: 4.873878716587337e-06
+  bias:
+    accel:
+      x: 7.549135895545244e-04
+      y: 0.001805886718248
+      z: 0.002395586011438
+    gyro:
+      x: 8.674066138832567e-05
+      y: 1.005391303275586e-04
+      z: 8.919962404601004e-05
+  ecef:
+      x: 8.565078494000000e+05
+      y: -4.842978088500000e+06
+      z: 4.047980191900000e+06
+
+imu:
+  publish_hz: 250
+  sensor_pub_rate: 250
+  topic: /imu/dataAdis
+  noise:
+    sig_gyro_inRun : 7.757018897752577e-06
+    sig_ARW : 2.908882086657216e-05
+    sig_accel_inRun : 3.139200000000000e-05
+    sig_VRW : 1.333333333333333e-04
+
+odo:
+  topic: /dead_reckoning/odometry
+  updates:
+    do_zupt: false
+    do_zaru: false
+
+encoderLeft:
+    topic: /roboteq/drivemotorin/left
+
+encoderRight:
+    topic: /roboteq/drivemotorin/right
+cmd:
+    topic: /cmd_vel_out
+joint:
+    topic: /dead_reckoning/joint_states
+gp:
+    topic: /core_nav/core_nav/gp_result
+
+frames:
+  frame_id_out: map
+  frame_id_fixed: odom
+  frame_id_imu: imu_link
+  frame_id_odo: odom_link
+
+wheel:
+  T_r_: 0.125
+  s_or_: 0.0
+  s_delta_or_: 0.0

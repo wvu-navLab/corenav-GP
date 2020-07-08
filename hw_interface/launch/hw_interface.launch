@@ -1,0 +1,18 @@
+<!-- This is the launch file for the hw_interface node ONLY!!!-->
+<!-- DO NOT EDIT -->
+
+<launch>
+
+    <include file="$(find hw_interface)/launch/hw_interface_plugins.launch"
+                ns="hw_interface" />
+    
+	<node name = "hw_interface"
+		pkg = "hw_interface"
+		type = "hw_interface_node"
+		output="screen"
+		ns = "hw_interface"
+
+		respawn="true"
+		respawn_delay = "10" 
+	/>
+</launch>

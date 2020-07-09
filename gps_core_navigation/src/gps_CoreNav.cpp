@@ -327,6 +327,7 @@ void gps_CoreNav::Propagate(const gps_CoreNav::Vector6& imu, const gps_CoreNav::
         // std::cout << "rearVel_" << '\n';
 
         dt_imu_ = imu_stamp_curr_ - imu_stamp_prev_;
+        ros::NodeHandle nh;
 
         count++;
 
@@ -461,8 +462,20 @@ void gps_CoreNav::Propagate(const gps_CoreNav::Vector6& imu, const gps_CoreNav::
         if(has_gpsECEF_ && has_gpsLLH_)
         {
         gps_CoreNav::gps_init(ins_vel_,ins_att_, ins_pos_,error_states_, P_, omega_b_ib_, gps_llh, gps_ecef);
+        ins_pos_llh_ << gps_llh[0]*180.0/INS::PI,gps_llh[1]*180.0/INS::PI, gps_llh[2];
+        // ROS_INFO("Inside");
+        PublishStates(ins_pos_llh_, pos_llh_pub_);
+        std::string path =  ros::package::getPath("core_nav") + "/config/init_params.yaml";
+        writeParams(path, ins_bias_a, ins_bias_g, ins_xyz_, ins_pos_, ins_att_);
+        ROS_INFO_THROTTLE(2,"Wrote to CoreNav param file: ");
+        std::cout << path.c_str() << std::endl;
+        has_gpsECEF_ = false;
+        has_gpsLLH_ = false;
+
         // std::cout << "diff" << latitude_prev-latitude_now<<'\n';
         }
+        // ROS_INFO("Outside");
+
         ba_(0)=error_states_(9);
         ba_(1)=error_states_(10);
         ba_(2)=error_states_(11);
@@ -486,14 +499,14 @@ void gps_CoreNav::Propagate(const gps_CoreNav::Vector6& imu, const gps_CoreNav::
         ins_bias_a << init_bias_a_x, init_bias_a_y, init_bias_a_z;
         ins_bias_g << init_bias_g_x, init_bias_g_y, init_bias_g_z;
 
-        ins_pos_llh_ << gps_llh[0]*180.0/INS::PI,gps_llh[1]*180.0/INS::PI, gps_llh[2];
+        // ins_pos_llh_ << gps_llh[0]*180.0/INS::PI,gps_llh[1]*180.0/INS::PI, gps_llh[2];
 
         PublishStates(ins_att_, attitude_pub_);
         PublishStates(ins_vel_, velocity_pub_);
         PublishStates(ins_pos_, position_pub_);
 
         PublishStates(ins_xyz_, ins_xyz_pub_);
-        PublishStates(ins_pos_llh_, pos_llh_pub_);
+        // PublishStates(ins_pos_llh_, pos_llh_pub_);
         PublishStates(ins_enu_, enu_pub_);
 
         PublishStates(ins_att_cov_, attitude_cov_pub_);
@@ -506,7 +519,7 @@ void gps_CoreNav::Propagate(const gps_CoreNav::Vector6& imu, const gps_CoreNav::
         PublishStates(ins_pos_cov_p, position_cov_pub_p);
         PublishStatesCN(ins_cn_, cn_pub_);
 
-        ros::NodeHandle nh;
+        // ros::NodeHandle nh;
 if (has_gpsECEF_ && has_gpsLLH_) {
   // nh.setParam("/init_true_ecef_x", gps_ecef[0]);
   // nh.setParam("/init_true_ecef_y", gps_ecef[1]);
@@ -516,10 +529,12 @@ if (has_gpsECEF_ && has_gpsLLH_) {
   // nh.setParam("/init_true_llh_z", gps_llh[2]);
   // nh.setParam("/init_true_yaw", ins_att_[2]);
 
-std::string path =  ros::package::getPath("core_nav") + "/config/init_params.yaml";
-writeParams(path, ins_bias_a, ins_bias_g, ins_xyz_, ins_pos_, ins_att_);
-ROS_INFO_THROTTLE(2,"Wrote to CoreNav param file: ");
-std::cout << path.c_str() << std::endl;
+// std::string path =  ros::package::getPath("core_nav") + "/config/init_params.yaml";
+// writeParams(path, ins_bias_a, ins_bias_g, ins_xyz_, ins_pos_, ins_att_);
+// ROS_INFO_THROTTLE(2,"Wrote to CoreNav param file: ");
+// std::cout << path.c_str() << std::endl;
+// has_gpsECEF_ = false;
+// has_gpsLLH_ = false;
 
 }
 

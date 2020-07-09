@@ -39,7 +39,7 @@ public:
 
 private:
 // Node initialization
-        bool Init(const ros::NodeHandle& n);
+        // bool Init(const ros::NodeHandle& n);
         bool LoadParameters(const ros::NodeHandle& n);
         bool RegisterCallbacks(const ros::NodeHandle& n);
 

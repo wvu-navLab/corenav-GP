@@ -1,5 +1,4 @@
 #include <init_core_navigation/InitCoreNav.h>
-
 #include <geometry_msgs/PoseStamped.h>
 #include <geometry_utils/GeometryUtilsROS.h>
 #include <parameter_utils/ParameterUtils.h>
@@ -26,11 +25,6 @@ bool InitCoreNav::Initialize(const ros::NodeHandle& n){
                 return false;
         }
 
-        if(!Init(n)) {
-                ROS_ERROR("%s: Failed to initialize.", name_.c_str());
-                return false;
-        }
-
         if(!RegisterCallbacks(n)) {
                 ROS_ERROR("%s: Failed to register callbacks.", name_.c_str());
                 return false;
@@ -39,15 +33,6 @@ bool InitCoreNav::Initialize(const ros::NodeHandle& n){
         return true;
 }
 
-bool InitCoreNav::Init(const ros::NodeHandle& n){
-
-        bias_a_(0) = init_ba_x;   bias_a_(1) = init_ba_y; bias_a_(2) = init_ba_z;
-        bias_g_(0) = init_bg_x;   bias_g_(1) = init_bg_y; bias_g_(2) = init_bg_z;
-
-
-
-        return true;
-}
 
 bool InitCoreNav::LoadParameters(const ros::NodeHandle& n){
         // Load frame ids.
@@ -64,20 +49,6 @@ bool InitCoreNav::LoadParameters(const ros::NodeHandle& n){
         if(!pu::Get("imu/publish_hz", publish_hz_)) return false;
         if(!pu::Get("imu/sensor_pub_rate", sensor_pub_rate_)) return false;
 
-        if (!pu::Get("init/position/x", init_x)) return false;
-        if (!pu::Get("init/position/y", init_y)) return false;
-        if (!pu::Get("init/position/z", init_z)) return false;
-
-        if (!pu::Get("init/ecef/x", init_ecef_x)) return false;
-        if (!pu::Get("init/ecef/y", init_ecef_y)) return false;
-        if (!pu::Get("init/ecef/z", init_ecef_z)) return false;
-
-        if (!pu::Get("init/bias/accel/x", init_ba_x)) return false;
-        if (!pu::Get("init/bias/accel/y", init_ba_y)) return false;
-        if (!pu::Get("init/bias/accel/z", init_ba_z)) return false;
-        if (!pu::Get("init/bias/gyro/x", init_bg_x)) return false;
-        if (!pu::Get("init/bias/gyro/y", init_bg_y)) return false;
-        if (!pu::Get("init/bias/gyro/z", init_bg_z)) return false;
 
         return true;
 }
@@ -152,7 +123,7 @@ void InitCoreNav::Propagate(const InitCoreNav::Vector6& imu,const InitCoreNav::V
 
           ins_bias_a(0)= f_ib_b_(0)/count;
           ins_bias_a(1)= f_ib_b_(1)/count;
-          ins_bias_a(2)= 0.0002;//f_ib_b_(2)/count; TODO
+          ins_bias_a(2)= f_ib_b_(2)/count;
 
           ins_bias_g(0)= omega_b_ib_(0)/count;
           ins_bias_g(1)= omega_b_ib_(1)/count;

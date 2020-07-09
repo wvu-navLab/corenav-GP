@@ -118,6 +118,12 @@ bool gps_CoreNav::Init(const ros::NodeHandle& n){
                  0,0,0,0,0,-1,0,0,0,0,0,0,0,0,0;
 
 
+        // R_gps << std::pow(0.1,2),0.0,0.0,0.0,0.0,0.0,
+        //         0.0, std::pow(0.1,2), 0.0,0.0,0.0,0.0,
+        //         0.0, 0.0, std::pow(0.1,2),0.0,0.0,0.0,
+        //         0.0,0.0,0.0,std::pow(0.01,2),0.0,0.0,
+        //         0.0,0.0,0.0,0.0,std::pow(0.01,2),0.0,
+        //         0.0,0.0,0.0,0.0,0.0,std::pow(0.01,2);
         R_gps << std::pow(0.1,2),0.0,0.0,0.0,0.0,0.0,
                 0.0, std::pow(0.1,2), 0.0,0.0,0.0,0.0,
                 0.0, 0.0, std::pow(0.1,2),0.0,0.0,0.0,
@@ -969,6 +975,15 @@ void gps_CoreNav::gps_init(const gps_CoreNav::Vector3 vel, const gps_CoreNav::Ve
 
         gps_CoreNav::Matrix3 Cnb = gps_CoreNav::eul_to_dcm(att[0],att[1],att[2]);
         gps_CoreNav::Matrix3 Cbn = Cnb.transpose();
+        gps_CoreNav::Matrix3 Cne;
+
+        // llh(0)=lat
+        // llh(1)=lon
+        Cne.row(0)<<-sin(llh(0))*cos(llh(1)), -sin(llh(1)), -cos(llh(0))*cos(llh(1));
+        Cne.row(1)<<-sin(llh(0))*sin(llh(1)), cos(llh(1)), -cos(llh(0))*sin(llh(1));
+        Cne.row(2)<< cos(llh(0)),0.0,-sin(llh(0));
+        gps_CoreNav::Matrix3 Cen = Cne.transpose();
+
         gps_CoreNav::Vector3 z_gps_pos;
         gps_CoreNav::Vector3 z_gps_vel;
         gps_CoreNav::Vector6 z_gps;

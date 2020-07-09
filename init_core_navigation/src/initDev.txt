@@ -141,33 +141,62 @@ bool InitCoreNav::RegisterCallbacks(const ros::NodeHandle& n){
 
 void InitCoreNav::Propagate(const InitCoreNav::Vector6& imu,const InitCoreNav::Vector3& gps_ecef, const InitCoreNav::Vector3& gps_llh){ // no joint
         dt_imu_ = imu_stamp_curr_ - imu_stamp_prev_;
-        count++;
+        counter++;
 
-          omega_b_ib_(0) += imu[3];
-          omega_b_ib_(1) += imu[4];
-          omega_b_ib_(2) += imu[5];
-          f_ib_b_(0) += imu[0];
-          f_ib_b_(1) += imu[1];
-          f_ib_b_(2) += imu[2];
-
-          ins_bias_a(0)= f_ib_b_(0)/count;
-          ins_bias_a(1)= f_ib_b_(1)/count;
-          ins_bias_a(2)= 0.0002;//f_ib_b_(2)/count; TODO
-
-          ins_bias_g(0)= omega_b_ib_(0)/count;
-          ins_bias_g(1)= omega_b_ib_(1)/count;
-          ins_bias_g(2)= omega_b_ib_(2)/count;
-
+// //sum
+//           omega_b_ib_(0) += imu[3];
+//           omega_b_ib_(1) += imu[4];
+//           omega_b_ib_(2) += imu[5];
+//
+//           f_ib_b_(0) += imu[0];
+//           f_ib_b_(1) += imu[1];
+//           f_ib_b_(2) += imu[2];
+// //mean
+//           ins_bias_a(0)= f_ib_b_(0)/count;
+//           ins_bias_a(1)= f_ib_b_(1)/count;
+//           ins_bias_a(2)= f_ib_b_(2)/count;
+//
+//           ins_bias_g(0)= omega_b_ib_(0)/count;
+//           ins_bias_g(1)= omega_b_ib_(1)/count;
+//           ins_bias_g(2)= omega_b_ib_(2)/count;
+//
           init_ecef(0)=gps_ecef(0);
           init_ecef(1)=gps_ecef(1);
           init_ecef(2)=gps_ecef(2);
           init_llh(0)=gps_llh(0);
           init_llh(1)=gps_llh(1);
           init_llh(2)=gps_llh(2);
+//
+//
+// //sum_sq
+//           vara(0) += pow((imu[0]),2 );
+//           vara(1) += pow((imu[1]),2 );
+//           vara(2) += pow((imu[2]),2 );
+//
+//           varg(0) += pow((imu[3]),2 );
+//           varg(1) += pow((imu[4]),2 );
+//           varg(2) += pow((imu[5]),2 );
+// // stdDev
+// stdDeva(0)=sqrt(fabs((vara(0)/count)-pow(ins_bias_a(0),2)));
+// stdDeva(1)=sqrt(fabs((vara(1)/count)-pow(ins_bias_a(1),2)));
+// stdDeva(2)=sqrt(fabs((vara(2)/count)-pow(ins_bias_a(2),2)));
+//
+// stdDevg(0)=sqrt(fabs((varg(0)/count)-pow(ins_bias_g(0),2)));
+// stdDevg(1)=sqrt(fabs((varg(1)/count)-pow(ins_bias_g(1),2)));
+// stdDevg(2)=sqrt(fabs((varg(2)/count)-pow(ins_bias_g(2),2)));
 
-if (count==200) {
+
+
+
+if (counter==200) {
+
+
   ROS_INFO("Detected acceleration bias:\n %.12f\n %.12f \n %.12f ", ins_bias_a(0),ins_bias_a(1),ins_bias_a(2));
   ROS_INFO("Detected gyroscope bias:\n %.12f\n %.12f \n %.12f ", ins_bias_g(0),ins_bias_g(1),ins_bias_g(2));
+
+  ROS_INFO("Detected acceleration bias:\n %.12f\n %.12f \n %.12f ", imu(0),imu(1),imu(2));
+  ROS_INFO("Detected gyroscope bias:\n %.12f\n %.12f \n %.12f ", imu(3),imu(4),imu(5));
+
   ROS_INFO("GPS LLH solution:\n %.12f\n %.12f \n %.12f ", init_llh(0),init_llh(1),init_llh(2));
   ROS_INFO("GPS ECEF solution:\n %.12f\n %.12f \n %.12f ", init_ecef(0),init_ecef(1),init_ecef(2));
 
@@ -202,12 +231,57 @@ std::cout << path2.c_str() << std::endl;
 
 InitCoreNav::Vector6 InitCoreNav::getImuData(const ImuData& imu_dataAdis_)
 {
-        InitCoreNav::Vector6 imuVec((Vector(6) << imu_dataAdis_.linear_acceleration.x,
-                                 imu_dataAdis_.linear_acceleration.y,
-                                 imu_dataAdis_.linear_acceleration.z,
-                                 imu_dataAdis_.angular_velocity.x,
-                                 imu_dataAdis_.angular_velocity.y,
-                                 imu_dataAdis_.angular_velocity.z).finished());
+        InitCoreNav::Vector6 imuVec;
+        // ((Vector(6) << imu_dataAdis_.linear_acceleration.x,
+        //                          imu_dataAdis_.linear_acceleration.y,
+        //                          imu_dataAdis_.linear_acceleration.z,
+        //                          imu_dataAdis_.angular_velocity.x,
+        //                          imu_dataAdis_.angular_velocity.y,
+        //                          imu_dataAdis_.angular_velocity.z).finished());
+
+                                 count++;
+                                 //sum
+                                           omega_b_ib_(0) += imu_dataAdis_.angular_velocity.x;
+                                           omega_b_ib_(1) += imu_dataAdis_.angular_velocity.y;
+                                           omega_b_ib_(2) += imu_dataAdis_.angular_velocity.z;
+
+                                           f_ib_b_(0) += imu_dataAdis_.linear_acceleration.x;
+                                           f_ib_b_(1) += imu_dataAdis_.linear_acceleration.y;
+                                           f_ib_b_(2) += imu_dataAdis_.linear_acceleration.z;
+                                 //mean
+                                           ins_bias_a(0)= f_ib_b_(0)/count;
+                                           ins_bias_a(1)= f_ib_b_(1)/count;
+                                           ins_bias_a(2)= f_ib_b_(2)/count;
+
+                                           ins_bias_g(0)= omega_b_ib_(0)/count;
+                                           ins_bias_g(1)= omega_b_ib_(1)/count;
+                                           ins_bias_g(2)= omega_b_ib_(2)/count;
+
+                                           // init_ecef(0)=gps_ecef(0);
+                                           // init_ecef(1)=gps_ecef(1);
+                                           // init_ecef(2)=gps_ecef(2);
+                                           // init_llh(0)=gps_llh(0);
+                                           // init_llh(1)=gps_llh(1);
+                                           // init_llh(2)=gps_llh(2);
+
+
+                                 //sum_sq
+                                           vara(0) += pow((imu_dataAdis_.angular_velocity.x),2 );
+                                           vara(1) += pow((imu_dataAdis_.angular_velocity.y),2 );
+                                           vara(2) += pow((imu_dataAdis_.angular_velocity.z),2 );
+
+                                           varg(0) += pow((imu_dataAdis_.linear_acceleration.x),2 );
+                                           varg(1) += pow((imu_dataAdis_.linear_acceleration.y),2 );
+                                           varg(2) += pow((imu_dataAdis_.linear_acceleration.z),2 );
+                                 // stdDev
+                                 imuVec(0)=sqrt(fabs((vara(0)/count)-pow(ins_bias_a(0),2)));
+                                 imuVec(1)=sqrt(fabs((vara(1)/count)-pow(ins_bias_a(1),2)));
+                                 imuVec(2)=sqrt(fabs((vara(2)/count)-pow(ins_bias_a(2),2)));
+
+                                 imuVec(3)=sqrt(fabs((varg(0)/count)-pow(ins_bias_g(0),2)));
+                                 imuVec(4)=sqrt(fabs((varg(1)/count)-pow(ins_bias_g(1),2)));
+                                 imuVec(5)=sqrt(fabs((varg(2)/count)-pow(ins_bias_g(2),2)));
+
         return imuVec;
 }
 

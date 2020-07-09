@@ -72,10 +72,10 @@ bool CoreNav::Init(const ros::NodeHandle& n){
         R_IP << 0.00045,0,0,0,
         0,0.1152,0,0,
         0,0,0.0025,0,
-        0,0,0,0.0025;
+        0,0,0,0.0001;
 
         R_IP_1 <<0.5,     0.5,    0.0, 0.0,
-                1/0.125,-1/0.125, 0.0, 0.0,
+                1/T_r_,-1/T_r_, 0.0, 0.0,
                 0.0,     0.0,     1.0, 0.0,
                 0.0,     0.0,     0.0, 1.0;
 
@@ -175,12 +175,6 @@ bool CoreNav::LoadParameters(const ros::NodeHandle& n){
         if (!pu::Get("init/orientation/covx", init_cov_roll)) return false;
         if (!pu::Get("init/orientation/covy", init_cov_pitch)) return false;
         if (!pu::Get("init/orientation/covz", init_cov_yaw)) return false;
-        if (!pu::Get("bias_a/x", init_ba_x)) return false;
-        if (!pu::Get("bias_a/y", init_ba_y)) return false;
-        if (!pu::Get("bias_a/z", init_ba_z)) return false;
-        if (!pu::Get("bias_g/x", init_bg_x)) return false;
-        if (!pu::Get("bias_g/y", init_bg_y)) return false;
-        if (!pu::Get("bias_g/z", init_bg_z)) return false;
 
         if (!pu::Get("bias_a/x", init_bias_a_x)) return false;
         if (!pu::Get("bias_a/y", init_bias_a_y)) return false;
@@ -298,8 +292,10 @@ void CoreNav::Propagate(const CoreNav::Vector6& imu, const CoreNav::Vector13& od
         //ROS_INFO("dt_imu = %f",dt_imu_);
         count++;
         // Initial bias
-        omega_b_ib_ << imu[3] -(init_bias_g_x)-bg_(0), imu[4] - (init_bias_g_y)- bg_(1), imu[5] -(init_bias_g_x) - bg_(2);
-        f_ib_b_ << imu[0] -(init_bias_a_x)-ba_(0), imu[1] - (init_bias_a_y)- ba_(1), imu[2] -(-9.81-init_bias_a_z) - ba_(2);
+        // omega_b_ib_ << imu[3] -(init_bias_g_x)-bg_(0), imu[4] - (init_bias_g_y)- bg_(1), imu[5] -(init_bias_g_x) - bg_(2);
+        // f_ib_b_ << imu[0] -(init_bias_a_x)-ba_(0), imu[1] - (init_bias_a_y)- ba_(1), imu[2] -(-9.81-init_bias_a_z) - ba_(2);
+        omega_b_ib_ << imu[3]-bg_(0), imu[4]-bg_(1), imu[5]-bg_(2);
+        f_ib_b_ << imu[0]-ba_(0), imu[1]-ba_(1), imu[2] - ba_(2);
 //------------------------------------------------------------------------------
         //Attitude Update---------------------------------------------------------------
         // input =insAtt(:,i-1),omega_ie,insLLH(:,i-1),omega_b_ib,ecc,Ro,insVel(:,i-1),dtIMU

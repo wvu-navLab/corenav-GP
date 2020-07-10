@@ -64,15 +64,19 @@ bool CoreNav::Init(const ros::NodeHandle& n){
         // P_pred=P;
         P_=P;
         P_pred=P_;
-        R_ << 0.00045,0,0,0,
-        0,0.1152,0,0,
-        0,0,0.0025,0,
-        0,0,0,0.0001;
+        
+        R_1<<0.5,0.5,0.0,0.0,
+        1/T_r_, -1/T_r_, 0.0,0.0,
+        0.0, 0.0,1.0,0.0,
+        0.0,0.0,0.0,1.0;
 
-        R_IP << 0.00045,0,0,0,
-        0,0.1152,0,0,
-        0,0,0.0025,0,
-        0,0,0,0.0001;
+        R_2<<0.03*0.03, 0.0,0.0,0.0,
+        0.0, 0.03*0.03, 0.0,0.0,
+        0.0,0.0,0.05*0.05,0.0,
+        0.0,0.0,0.0,1.0;
+
+        R_<<R_1*R_2*R_1.transpose();
+        R_IP<<R_;
 
         R_IP_1 <<0.5,     0.5,    0.0, 0.0,
                 1/T_r_,-1/T_r_, 0.0, 0.0,
@@ -292,10 +296,8 @@ void CoreNav::Propagate(const CoreNav::Vector6& imu, const CoreNav::Vector13& od
         //ROS_INFO("dt_imu = %f",dt_imu_);
         count++;
         // Initial bias
-        // omega_b_ib_ << imu[3] -(init_bias_g_x)-bg_(0), imu[4] - (init_bias_g_y)- bg_(1), imu[5] -(init_bias_g_x) - bg_(2);
-        // f_ib_b_ << imu[0] -(init_bias_a_x)-ba_(0), imu[1] - (init_bias_a_y)- ba_(1), imu[2] -(-9.81-init_bias_a_z) - ba_(2);
-        omega_b_ib_ << imu[3]-bg_(0), imu[4]-bg_(1), imu[5]-bg_(2);
-        f_ib_b_ << imu[0]-ba_(0), imu[1]-ba_(1), imu[2] - ba_(2);
+        omega_b_ib_ << imu[3] -(init_bias_g_x)-bg_(0), imu[4] - (init_bias_g_y)- bg_(1), imu[5] -(init_bias_g_x) - bg_(2);
+        f_ib_b_ << imu[0] -(init_bias_a_x)-ba_(0), imu[1] - (init_bias_a_y)- ba_(1), imu[2] -(-9.81-init_bias_a_z) - ba_(2);
 //------------------------------------------------------------------------------
         //Attitude Update---------------------------------------------------------------
         // input =insAtt(:,i-1),omega_ie,insLLH(:,i-1),omega_b_ib,ecc,Ro,insVel(:,i-1),dtIMU

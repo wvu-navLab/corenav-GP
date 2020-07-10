@@ -17,7 +17,7 @@ init:
   orientation:
     x: 0.0
     y: 0.0
-    z: 0.0
+    z: 5.0
     covx: 1.218469679146834e-06
     covy: 1.218469679146834e-06
     covz: 0.01
@@ -74,6 +74,6 @@ frames:
   frame_id_odo: odom_link
 
 wheel:
-  T_r_: 0.125
+  T_r_: 0.685
   s_or_: 0.0
   s_delta_or_: 0.0

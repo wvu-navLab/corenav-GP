@@ -67,16 +67,28 @@ bool gps_CoreNav::Init(const ros::NodeHandle& n){
         // P_pred=P;
         P_=P;
         P_pred=P_;
-        R_ << 0.00045,0,0,0,
-        0,0.1152,0,0,
-        0,0,0.0025,0,
-        0,0,0,0.0025;
+        // R_ << 0.00045,0,0,0,
+        // 0,0.1152,0,0,
+        // 0,0,0.0025,0,
+        // 0,0,0,0.0025;
 
-        R_IP << 0.00045,0,0,0,
-        0,0.1152,0,0,
-        0,0,0.0025,0,
-        0,0,0,0.0025;
+        // R_IP << 0.00045,0,0,0,
+        // 0,0.1152,0,0,
+        // 0,0,0.0025,0,
+        // 0,0,0,0.0025;
 
+        R_1<<0.5,0.5,0.0,0.0,
+        1/T_r_, -1/T_r_, 0.0,0.0,
+        0.0, 0.0,1.0,0.0,
+        0.0,0.0,0.0,1.0;
+
+        R_2<<0.03*0.03, 0.0,0.0,0.0,
+        0.0, 0.03*0.03, 0.0,0.0,
+        0.0,0.0,0.05*0.05,0.0,
+        0.0,0.0,0.0,1.0;
+
+        R_<<R_1*R_2*R_1.transpose();
+        R_IP<<R_;
 
         R_zupt << std::pow(0.02,2),0,0,
         0,std::pow(0.02,2),0,
@@ -246,12 +258,19 @@ void gps_CoreNav::JointCallBack(const JointData& joint_data_){
 void gps_CoreNav::GPSLLHCallBack(const GPSLLHData& gps_llh_data_){
   gps_llh =getGPSLLHData(gps_llh_data_);
   // std::cout << "llh" <<gps_llh <<'\n';
-
+  gpsCount++;
   has_gpsLLH_ = true;
+
+  if (gpsCount % 103 == 0) {
   latitude_prev = latitude_now;
   longitude_prev = longitude_now;
-  latitude_now =  gps_llh_data_.lat;
-  longitude_now =gps_llh_data_.lon;
+}
+  if (gpsCount % 53== 0) {
+    latitude_now =  gps_llh_data_.lat;
+    longitude_now =gps_llh_data_.lon;
+  }
+
+  // θ = atan2( sin Δλ ⋅ cos φ2 , cos φ1 ⋅ sin φ2 − sin φ1 ⋅ cos φ2 ⋅ cos Δλ )
   return;
 }
 
@@ -325,11 +344,40 @@ bool gps_CoreNav::RegisterCallbacks(const ros::NodeHandle& n){
 
 void gps_CoreNav::Propagate(const gps_CoreNav::Vector6& imu, const gps_CoreNav::Vector13& odo, const gps_CoreNav::Vector3& cmd,const gps_CoreNav::Vector2& encoderLeft, const gps_CoreNav::Vector2& encoderRight, const gps_CoreNav::Vector4& joint, const gps_CoreNav::Vector6& gps_ecef, const gps_CoreNav::Vector3& gps_llh){
         // std::cout << "rearVel_" << '\n';
-
-        dt_imu_ = imu_stamp_curr_ - imu_stamp_prev_;
         ros::NodeHandle nh;
-
         count++;
+        dt_imu_ = imu_stamp_curr_ - imu_stamp_prev_;
+
+// PointAKansas latitude_prev(39.09) longitude_prev(-94.58)
+// PointBLouis  latitude_now(38.62) longitude_now(-90.2)
+
+Xhead=cos(latitude_now*INS::PI/180)*sin(longitude_now*INS::PI/180-longitude_prev*INS::PI/180);
+Yhead=cos(latitude_prev*INS::PI/180)*sin(latitude_now*INS::PI/180)-sin(latitude_prev*INS::PI/180)*cos(latitude_now*INS::PI/180)*cos(longitude_now*INS::PI/180-longitude_prev*INS::PI/180);
+bearing=atan2(Xhead,Yhead);
+
+if (bearing!=0 && abs(bearing-bearingprev) < 0.002 && abs(rearVel_) > 0.3) {
+  std::cout << "bearingdeg:" << bearing*180/INS::PI<<'\n';
+  std::cout << "bearing:" << bearing<<'\n';
+}
+
+bearingprev=bearing;
+
+
+// std::cout << "latitude_now:" << latitude_now*INS::PI/180<<'\n';
+// std::cout << "latitude_prev:" << latitude_prev*INS::PI/180<<'\n';
+//
+// std::cout << "longitude_now:" << longitude_now*INS::PI/180<<'\n';
+// std::cout << "longitude_prev:" << longitude_prev*INS::PI/180<<'\n';
+//
+// std::cout << "bearing:" << bearing<<'\n';
+// // std::cout << "bearingdeg:" << bearing*180/INS::PI<<'\n';
+
+// if (i % M==0) {
+//   /* code */
+// }
+
+
+
 
         omega_b_ib_ << imu[3] -(init_bias_g_x)-bg_(0), imu[4] - (init_bias_g_y)- bg_(1), imu[5] -(init_bias_g_x) - bg_(2);
         f_ib_b_ << imu[0] -(init_bias_a_x)-ba_(0), imu[1] - (init_bias_a_y)- ba_(1), imu[2] -(-9.81-init_bias_a_z) - ba_(2);
@@ -467,8 +515,8 @@ void gps_CoreNav::Propagate(const gps_CoreNav::Vector6& imu, const gps_CoreNav::
         PublishStates(ins_pos_llh_, pos_llh_pub_);
         std::string path =  ros::package::getPath("core_nav") + "/config/init_params.yaml";
         writeParams(path, ins_bias_a, ins_bias_g, ins_xyz_, ins_pos_, ins_att_);
-        ROS_INFO_THROTTLE(2,"Wrote to CoreNav param file: ");
-        std::cout << path.c_str() << std::endl;
+        ROS_INFO_THROTTLE(10,"Wrote to CoreNav param file: ");
+        // std::cout << path.c_str() << std::endl;
         has_gpsECEF_ = false;
         has_gpsLLH_ = false;
 
@@ -582,7 +630,7 @@ void gps_CoreNav::writeParams(std::string path_to_param_file, const gps_CoreNav:
         paramsFile << "init_yaw:" << std::endl;
         // paramsFile << std::fixed << std::setprecision(12) << "  x: " << (ins_pos_(0))<< std::endl;
         // paramsFile << std::fixed << std::setprecision(12) << "  y: " << (ins_pos_(1))<< std::endl;
-        paramsFile << std::fixed << std::setprecision(12) << "  z: " << (ins_att_(2))<< std::endl;
+        paramsFile << std::fixed << std::setprecision(12) << "  z: " << (bearing)<< std::endl;
     // Close file
     paramsFile.close();
 }

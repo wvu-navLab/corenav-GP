@@ -209,6 +209,8 @@ public:
         gps_CoreNav::Vector9 ins_cn_;
         gps_CoreNav::Matrix P_, Q_, STM_, P_pred, P;
         Eigen::Matrix<double, 4, 4> R_;
+        Eigen::Matrix<double, 4, 4> R_1;
+        Eigen::Matrix<double, 4, 4> R_2;
         Eigen::Matrix<double, 3, 3> R_zupt;
         Eigen::Matrix<double, 3, 3> R_zaru;
         Eigen::Matrix<double, 4, 4> R_IP;
@@ -257,7 +259,9 @@ public:
         double imu_stamp_curr_, imu_stamp_prev_, odo_stamp_curr_, odo_stamp_prev_,latitude_prev,latitude_now,longitude_prev,longitude_now;
         double joint_stamp_curr_, joint_stamp_prev_;
         double dt_odo_, dt_imu_, dt_lat,dt_lon,yawx,yawy,yawGPS;
+        double Xhead, Yhead, bearing,bearingprev;
         int count=0;
+        int gpsCount=0;
         int slip_i, i;
         double xy_errSlip;
         double odomUptCount, /*startRecording, stopRecording,*/ saveCountOdom;

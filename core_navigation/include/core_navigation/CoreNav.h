@@ -211,6 +211,8 @@ public:
         CoreNav::Vector9 ins_cn_;
         CoreNav::Matrix P_, Q_, STM_, P_pred, P;
         Eigen::Matrix<double, 4, 4> R_;
+        Eigen::Matrix<double, 4, 4> R_1;
+        Eigen::Matrix<double, 4, 4> R_2;
         Eigen::Matrix<double, 3, 3> R_zupt;
         Eigen::Matrix<double, 3, 3> R_zaru;
         Eigen::Matrix<double, 4, 4> R_IP;

@@ -71,5 +71,7 @@ frames:
 wheel:
   # T_r_: 0.125
   T_r_: 0.685
-  s_or_: -0.07
-  s_delta_or_: -0.6
+  # s_or_: -0.07
+  s_or_: 0.0
+  # s_delta_or_: -0.6
+  s_delta_or_: 0.0

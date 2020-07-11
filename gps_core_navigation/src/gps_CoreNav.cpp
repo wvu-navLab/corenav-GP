@@ -607,12 +607,12 @@ void gps_CoreNav::writeParams(std::string path_to_param_file, const gps_CoreNav:
 
 
     // Write to file
-        paramsFile << "bias_a:" << std::endl;
+        paramsFile << "mean_bias_a:" << std::endl;
         paramsFile << std::fixed << std::setprecision(12) << "  x: " << (ins_bias_a(0))<< std::endl;
         paramsFile << std::fixed << std::setprecision(12) << "  y: " << (ins_bias_a(1))<< std::endl;
         paramsFile << std::fixed << std::setprecision(12) << "  z: " << (ins_bias_a(2))<< std::endl;
 
-        paramsFile << "bias_g:" << std::endl;
+        paramsFile << "mean_bias_g:" << std::endl;
         paramsFile << std::fixed << std::setprecision(12) << "  x: " << (ins_bias_g(0))<< std::endl;
         paramsFile << std::fixed << std::setprecision(12) << "  y: " << (ins_bias_g(1))<< std::endl;
         paramsFile << std::fixed << std::setprecision(12) << "  z: " << (ins_bias_g(2))<< std::endl;

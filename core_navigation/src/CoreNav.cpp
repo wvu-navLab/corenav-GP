@@ -55,8 +55,10 @@ bool CoreNav::Init(const ros::NodeHandle& n){
         P(0,0)=init_cov_roll;     P(1,1)=init_cov_pitch;     P(2,2)=init_cov_yaw;//4.873878716587337e-06;
         P(3,3)=init_cov_vx;       P(4,4)=init_cov_vy;        P(5,5)=init_cov_vz;
         P(6,6)=init_cov_x;        P(7,7)=init_cov_y;         P(8,8)=init_cov_z;
-        P(9,9)=init_bias_a_x;     P(10,10)=init_bias_a_y;    P(11,11)=init_bias_a_z;
-        P(12,12)=init_bias_g_x;   P(13,13)=init_bias_g_y;    P(14,14)=init_bias_g_z;
+        // biasstd = ba and P(9,9)
+        // biasmean= init_bias
+        P(9,9)=init_bias_std_a_x;     P(10,10)=init_bias_std_a_y;    P(11,11)=init_bias_std_a_z;
+        P(12,12)=init_bias_std_g_x;   P(13,13)=init_bias_std_g_y;    P(14,14)=init_bias_std_g_z;
 
         ba_(0) = P(9,9);   ba_(1) = P(10,10); ba_(2) = P(11,11);
         bg_(0) = P(12,12); bg_(1) = P(13,13); bg_(2) = P(14,14);
@@ -64,7 +66,7 @@ bool CoreNav::Init(const ros::NodeHandle& n){
         // P_pred=P;
         P_=P;
         P_pred=P_;
-        
+
         R_1<<0.5,0.5,0.0,0.0,
         1/T_r_, -1/T_r_, 0.0,0.0,
         0.0, 0.0,1.0,0.0,
@@ -180,12 +182,19 @@ bool CoreNav::LoadParameters(const ros::NodeHandle& n){
         if (!pu::Get("init/orientation/covy", init_cov_pitch)) return false;
         if (!pu::Get("init/orientation/covz", init_cov_yaw)) return false;
 
-        if (!pu::Get("bias_a/x", init_bias_a_x)) return false;
-        if (!pu::Get("bias_a/y", init_bias_a_y)) return false;
-        if (!pu::Get("bias_a/z", init_bias_a_z)) return false;
-        if (!pu::Get("bias_g/x", init_bias_g_x)) return false;
-        if (!pu::Get("bias_g/y", init_bias_g_y)) return false;
-        if (!pu::Get("bias_g/z", init_bias_g_z)) return false;
+        if (!pu::Get("mean_bias_a/x", init_bias_mean_a_x)) return false;
+        if (!pu::Get("mean_bias_a/y", init_bias_mean_a_y)) return false;
+        if (!pu::Get("mean_bias_a/z", init_bias_mean_a_z)) return false;
+        if (!pu::Get("mean_bias_g/x", init_bias_mean_g_x)) return false;
+        if (!pu::Get("mean_bias_g/y", init_bias_mean_g_y)) return false;
+        if (!pu::Get("mean_bias_g/z", init_bias_mean_g_z)) return false;
+
+        if (!pu::Get("init/std_bias_a/x", init_bias_std_a_x)) return false;
+        if (!pu::Get("init/std_bias_a/y", init_bias_std_a_y)) return false;
+        if (!pu::Get("init/std_bias_a/z", init_bias_std_a_z)) return false;
+        if (!pu::Get("init/std_bias_g/x", init_bias_std_g_x)) return false;
+        if (!pu::Get("init/std_bias_g/y", init_bias_std_g_y)) return false;
+        if (!pu::Get("init/std_bias_g/z", init_bias_std_g_z)) return false;
 
         if (!pu::Get("wheel/T_r_", T_r_)) return false;
         if (!pu::Get("wheel/s_or_", s_or_)) return false;
@@ -296,30 +305,44 @@ void CoreNav::Propagate(const CoreNav::Vector6& imu, const CoreNav::Vector13& od
         //ROS_INFO("dt_imu = %f",dt_imu_);
         count++;
         // Initial bias
-        omega_b_ib_ << imu[3] -(init_bias_g_x)-bg_(0), imu[4] - (init_bias_g_y)- bg_(1), imu[5] -(init_bias_g_x) - bg_(2);
-        f_ib_b_ << imu[0] -(init_bias_a_x)-ba_(0), imu[1] - (init_bias_a_y)- ba_(1), imu[2] -(-9.81-init_bias_a_z) - ba_(2);
+        omega_b_ib_ << imu[3] -(init_bias_mean_g_x)-bg_(0), imu[4] - (init_bias_mean_g_y)- bg_(1), imu[5] -(init_bias_mean_g_x) - bg_(2);
+        f_ib_b_ << imu[0] -(init_bias_mean_a_x)-ba_(0), imu[1] - (init_bias_mean_a_y)- ba_(1), imu[2] -(-9.81-init_bias_mean_a_z) - ba_(2);
 //------------------------------------------------------------------------------
         //Attitude Update---------------------------------------------------------------
         // input =insAtt(:,i-1),omega_ie,insLLH(:,i-1),omega_b_ib,ecc,Ro,insVel(:,i-1),dtIMU
         // output= insAtt(:,i), Cb2n+,Cb2n-,Omega_n_en,Omega_n_ie,R_N,R_E,omega_n_in,omega_n_ie
         //------------------------------------------------------------------------------
         CoreNav::Matrix3 CnbMinus = CoreNav::eul_to_dcm(ins_att_[0],ins_att_[1],ins_att_[2]);
+        psiEst=ins_att_[2];
         CbnMinus=CnbMinus.transpose();
         omega_n_ie_ << INS::omega_ie*cos(ins_pos_[0]), 0.0, (-1.0)*INS::omega_ie*sin(ins_pos_[0]); // Checked
         Omega_b_ib_ = CoreNav::skew_symm( omega_b_ib_ );
+    //     Omega_b_ib= [0 -omega_b_ib(3) omega_b_ib(2);
+    //                 omega_b_ib(3) 0 -omega_b_ib(1);
+    //                 -omega_b_ib(2) omega_b_ib(1) 0];
         Omega_n_ie_ = CoreNav::skew_symm( omega_n_ie_ );
-        // Radius of Curvature for North-South Motion (eq. 2.105)
-        double R_N = INS::Ro*(1.0-pow(INS::ecc,2.0))/pow(1.0-pow(INS::ecc,2.0)*pow(sin(ins_pos_(0)),2.0),(3.0/2.0));
-        // Radius of Curvature in East-West Direction (eq. 2.106)
-        double R_E = INS::Ro/sqrt(1.0-pow(INS::ecc,2.0)*pow(sin(ins_pos_(0)),2.0));
-        //rotation rate vector
+    //     Omega_n_ie = omega_ie * [ 0 sin(insLLHMinus(1)) 0;
+    //                -sin(insLLHMinus(1)) 0 -cos(insLLHMinus(1));
+    //                 0 cos(insLLHMinus(1)) 0];
 
+        // Radius of Curvature for North-South Motion (eq. 2.105)
+        double R_N = INS::Ro*(1.0-pow(INS::ecc,2.0))/pow((1.0-pow(INS::ecc,2.0)*pow(sin(ins_pos_(0)),2.0)),(3.0/2.0)); //check 2.105 eq
+        // std::cout << "RN1" << R_N<< '\n';
+        // std::cout << "RN2" << R_N - INS::Ro*(1.0-pow(INS::ecc,2.0))/pow(1.0-pow(INS::ecc,2.0)*pow(sin(ins_pos_(0)),2.0),(3.0/2.0)) <<'\n';
+        // Radius of Curvature in East-West Direction (eq. 2.106)
+        double R_E = INS::Ro/pow((1.0-pow(INS::ecc,2.0)*pow(sin(ins_pos_(0)),2.0)),(1.0/2.0)); //check
+
+        //rotation rate vector
         omega_n_en_ << ins_vel_(1)/(R_E+ins_pos_(2)),
         (-1.0)*ins_vel_(0)/(R_N+ins_pos_(2)),
         ((-1.0)*ins_vel_(1)*tan(ins_pos_(0)))/(R_E+ins_pos_(2));
 
 
         Omega_n_en_ = CoreNav::skew_symm( omega_n_en_ );
+        // Omega_n_en_= [0 -omega_n_en(3) omega_n_en(2);
+        // omega_n_en(3) 0 -omega_n_en(1);
+        // -omega_n_en(2) omega_n_en(1) 0];
+
         //eq. 2.48
         omega_n_in_ = omega_n_en_ + omega_n_ie_;
 
@@ -365,7 +388,9 @@ void CoreNav::Propagate(const CoreNav::Vector6& imu, const CoreNav::Vector13& od
         //------------------------------------------------------------------------------
         // Q Matrix --------------------------------------------------------------------
         //------------------------------------------------------------------------------
-        Q_ = CoreNav::calc_Q(R_N,R_EPlus,ins_pos_, dt_imu_, CbnPlus, f_ib_b_);
+        // Q_ = CoreNav::calc_Q(R_N,R_EPlus,ins_pos_, dt_imu_, CbnPlus, f_ib_b_);
+        Q_ = CoreNav::calc_Q(R_N,R_E,ins_pos_, dt_imu_, CbnPlus, f_ib_b_);
+
         //------------------------------------------------------------------------------
         // P Matrix --------------------------------------------------------------------
         //------------------------------------------------------------------------------
@@ -378,15 +403,20 @@ void CoreNav::Propagate(const CoreNav::Vector6& imu, const CoreNav::Vector13& od
         //------------------------------------------------------------------------------
         // Measurement Matrix ----------------------------------------------------------
         //------------------------------------------------------------------------------
-        CoreNav::Matrix3 Cn2bPlus=CbnPlus.transpose();
-        CoreNav::Vector3 omega_b_ie=Cn2bPlus*omega_n_ie_;
-        CoreNav::Vector3 omega_b_ei=-1.0*omega_b_ie;
-        CoreNav::Vector3 omega_b_eb=omega_b_ei+omega_b_ib_;
+        // CoreNav::Matrix3 Cn2bPlus=CbnPlus.transpose();
+        // CoreNav::Vector3 omega_b_ie=Cn2bPlus*omega_n_ie_;
+        // CoreNav::Vector3 omega_b_ei=-1.0*omega_b_ie;
+        // CoreNav::Vector3 omega_b_eb=omega_b_ei+omega_b_ib_;
 
         // TODO: WE NEED FIXED VALUES FOR STM Q AND P WHEN WE RUN THE GP
 
         if (has_odo_)
         {
+          CoreNav::Matrix3 Cn2bPlus=CbnPlus.transpose();
+          CoreNav::Vector3 omega_b_ie=Cn2bPlus*omega_n_ie_;
+          CoreNav::Vector3 omega_b_ei=-1.0*omega_b_ie;
+          CoreNav::Vector3 omega_b_eb=omega_b_ei+omega_b_ib_;
+
                 CoreNav::Matrix3 ins_vel_ss; //ins_vel_ skew symmetric
                 ins_vel_ss = CoreNav::skew_symm(ins_vel_);
                 CoreNav::Vector3 Val_H21(0,cos(ins_att_(0)),sin(ins_att_(0)));
@@ -465,7 +495,7 @@ void CoreNav::Update(const CoreNav::Vector13& odo,const CoreNav::Vector4& joint)
         CoreNav::Matrix3 Cn2bUnc=CoreNav::eul_to_dcm(ins_att_(0),ins_att_(1),ins_att_(2));
         H11_ =-H11_/dt_odo_;
         H12_ =-H12_/dt_odo_;
-        H21_ = H21_*(ins_att_(2)-psiEst)/(dt_odo_*dt_odo_); // TODO Check here
+        H21_ = H21_*(ins_att_(2)-init_yaw)/(dt_odo_*dt_odo_); // TODO Check here
         H31_ =-H31_/dt_odo_;
         H32_ =-H32_/dt_odo_;
         H24_ =-(cos(ins_att_(1))*eye3.row(2)*Cn2bUnc.transpose())/dt_odo_;
@@ -475,7 +505,7 @@ void CoreNav::Update(const CoreNav::Vector13& odo,const CoreNav::Vector4& joint)
         double z1_odom=rearVel_*(1-s_or_);
         double z2_odom=headRate_*(1-s_or_)-((z11_/dt_odo_)/T_r_)*s_delta_or_;
         double z1_ins=z11_;
-        double z2_ins=(ins_att_(2)-init_yaw)*z21_; // TODO Check here
+        double z2_ins=(ins_att_(2)-psiEst)*z21_; // psiEst in here should be the heading between the updates (i.e., psiEst(1), psiEst(26), psiEst(51)
         if (abs(z2_ins) > 0.5) {
                 z2_ins=0.0;
         }
@@ -502,11 +532,11 @@ void CoreNav::Update(const CoreNav::Vector13& odo,const CoreNav::Vector4& joint)
         CoreNav::Matrix3 insAttEst;
         insAttEst<<(eye3-error_states_ss)*Cn2bUnc.transpose();
 
-        double phiEst = atan2(insAttEst(2,1),insAttEst(2,2));
-        double thetaEst = asin(-insAttEst(2,0));
-        double psiEst = atan2(insAttEst(1,0),insAttEst(0,0));
+        // double phiEst = atan2(insAttEst(2,1),insAttEst(2,2));
+        // double thetaEst = asin(-insAttEst(2,0));
+        // double psiEst = atan2(insAttEst(1,0),insAttEst(0,0));
 
-        ins_att_ << phiEst, thetaEst, psiEst;
+        ins_att_ << atan2(insAttEst(2,1),insAttEst(2,2)), asin(-insAttEst(2,0)), atan2(insAttEst(1,0),insAttEst(0,0));
         ins_vel_ << ins_vel_(0)-error_states_(3), ins_vel_(1)-error_states_(4), ins_vel_(2)-error_states_(5);
         ins_pos_ << ins_pos_(0)-error_states_(6), ins_pos_(1)-error_states_(7), ins_pos_(2)-error_states_(8);
 
@@ -517,7 +547,37 @@ void CoreNav::Update(const CoreNav::Vector13& odo,const CoreNav::Vector4& joint)
         error_states_.segment(0,9)<<Eigen::VectorXd::Zero(9);
 
         P_=(Eigen::MatrixXd::Identity(15,15) - K_*H_) * P_ * ( Eigen::MatrixXd::Identity(15,15) - K_ * H_ ).transpose() + K_ * R_ * K_.transpose();
+///////////////////////////////////////////////////////////
 
+
+// if ( std::abs(rearVel_) < 0.005) // TODO: Revisit here
+// {
+//         CoreNav::zupt(ins_vel_, ins_att_, ins_pos_, error_states_, P_);
+//         CoreNav::zaru(ins_vel_, ins_att_, ins_pos_, error_states_, P_, omega_b_ib_);
+// }
+// ba_(0)=error_states_(9);
+// ba_(1)=error_states_(10);
+// ba_(2)=error_states_(11);
+// bg_(0)=error_states_(12);
+// bg_(1)=error_states_(13);
+// bg_(2)=error_states_(14);
+//
+// ins_enu_ << CoreNav::llh_to_enu(ins_pos_[0],ins_pos_[1],ins_pos_[2]);
+// ins_cn_<<ins_att_,ins_vel_,ins_enu_;
+// ins_xyz_ << CoreNav::llh_to_xyz(ins_pos_[0],ins_pos_[1],ins_pos_[2]);
+// ins_pos_llh_ << ins_pos_[0]*180.0/INS::PI,ins_pos_[1]*180.0/INS::PI, ins_pos_[2];
+//
+// PublishStates(ins_att_, attitude_pub_);
+// PublishStates(ins_vel_, velocity_pub_);
+// PublishStates(ins_pos_, position_pub_);
+//
+// PublishStates(ins_enu_, enu_pub_);
+// PublishStates(ins_xyz_, ins_xyz_pub_);
+// PublishStates(ins_pos_llh_, pos_llh_pub_);
+//
+// PublishStatesCN(ins_cn_, cn_pub_);
+
+////////////////////////////////////////////////////////////
 
         double vlin=eye3.row(0)*(Cn2bUnc*ins_vel_);
         double slip= std::max(std::max(((velFrontRight_)-vlin)/(velFrontRight_),((velBackRight_)-vlin)/(velBackRight_)),std::max(((velFrontLeft_)-vlin)/(velFrontLeft_),((velBackLeft_)-vlin)/(velBackLeft_)));

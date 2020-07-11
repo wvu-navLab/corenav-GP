@@ -250,8 +250,9 @@ public:
         double init_cov_vx,init_cov_vy,init_cov_vz;
         double init_cov_roll, init_cov_pitch, init_cov_yaw;
         double init_ecef_x,init_ecef_y,init_ecef_z;
-        double init_ba_x, init_ba_y, init_ba_z, init_bg_x, init_bg_y, init_bg_z;
-        double init_bias_a_x, init_bias_a_y, init_bias_a_z, init_bias_g_x, init_bias_g_y, init_bias_g_z;
+        // double init_ba_x, init_ba_y, init_ba_z, init_bg_x, init_bg_y, init_bg_z;
+        double init_bias_std_a_x, init_bias_std_a_y, init_bias_std_a_z, init_bias_std_g_x, init_bias_std_g_y, init_bias_std_g_z;
+        double init_bias_mean_a_x, init_bias_mean_a_y, init_bias_mean_a_z, init_bias_mean_g_x, init_bias_mean_g_y, init_bias_mean_g_z;
         double sigma_z, sigma_vx, sigma_vy, prev_stamp_, up_time_;
         double sigma_vz, sigma_roll, sigma_pitch, sigma_yaw;
         double imu_stamp_curr_, imu_stamp_prev_, odo_stamp_curr_, odo_stamp_prev_;

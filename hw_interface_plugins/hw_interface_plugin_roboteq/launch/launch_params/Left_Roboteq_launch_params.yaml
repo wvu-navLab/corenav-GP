@@ -1,0 +1,21 @@
+plugin_names:
+    {
+        brushed : hw_interface_plugin_roboteq
+    }
+
+brushed:
+    {
+        Left_Roboteq : Left_Roboteq,
+    }
+
+Right_Roboteq:
+    {
+        deviceName         : "/dev/serial/by-path/pci-0000:00:14.0-usb-0:5.3.3:1.0-port1",
+        baudrate           : 115200,
+        subscribeToTopic   : "/control/actuatorout",
+        publishToTopic     : "/roboteq/drivemotorin/left",
+        controllerType     : "Left_Drive",
+        initializationCmd  : "encoder_counter_absolute feedback motor_amps battery_amps",
+        initCmdCycle       : 20,
+        wheelType          : "",
+    }

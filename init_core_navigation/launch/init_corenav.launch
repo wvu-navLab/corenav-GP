@@ -1,0 +1,17 @@
+<launch>
+  <!-- True for simulation, false for real-time and bagfiles -->
+  <param name="/use_sim_time" value="false"/>
+
+  <group ns="init_core_nav">
+    <!-- SLAM -->
+    <node pkg="init_core_nav"
+          name="init_core_nav"
+          type="init_core_nav_node"
+          output="screen">
+
+      <!-- Rates -->
+      <rosparam file="$(find init_core_nav)/config/parameters.yaml"/>
+
+    </node>
+  </group>
+</launch>

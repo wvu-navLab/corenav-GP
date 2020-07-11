@@ -1,0 +1,12 @@
+<!-- All this ROS Launch file does is load a .yaml file to the ROS Parameter server -->
+    <!-- this is package relative using the find command -->
+<launch>
+    
+    <rosparam
+                command="load"
+                file="$(find hw_interface_plugin_adis_imu)/launch/launch_params/Adis_Imu_Serial_launch_params.yaml"
+                subst_value="true"
+    />
+
+</launch>
+

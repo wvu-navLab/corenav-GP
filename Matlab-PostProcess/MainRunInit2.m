@@ -117,4 +117,13 @@ offsetCtr=0;
 aaa=1;
 zeroUptCount=0;
 odomUptCount=1;
-
+slipCounter=0;
+case1=false;%imu only
+case2=true;%imu+predictionR
+case3=false;%imu+predictionFixed
+flag=true;
+gpFlag=false;
+stopFlag=false;
+startRecording=0;
+stopRecording=0;
+utc=1;

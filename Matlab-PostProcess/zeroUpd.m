@@ -25,7 +25,7 @@ function [insVel_new,insAtt_new,insLLH_new,x_err_new,P_new,postFit] = zeroUpd(in
         0.0,   0.0,   0.0025^2];
     R_zupt=[0.02^2, 0.0,   0.0;
         0.0,   0.02^2, 0.0;
-        0.0,   0.0,   0.02^2];
+        0.0,   0.0,   1.0^2];
     
     R_tot=eye(6).*[diag(R_zaru);diag(R_zupt)];
     K_zaru=P_old*H_tot'*inv(H_tot*P_old*H_tot'+R_tot);

@@ -271,3 +271,7 @@ end
 %      tTodom-min(tTodom),envHigh(1,1:length(tTodom)), ...
 %      tTodom-min(tTodom),envMean(1,1:length(tTodom)), ...
 %      tTodom-min(tTodom),envLow(1,1:length(tTodom)))
+figure;plot3(ENU(1,:),ENU(2,:),ENU(3,:))
+hold on;
+plot3(ENUGPS(1,:),ENUGPS(2,:),ENUGPS(3,:))
+grid on

@@ -83,13 +83,16 @@ for i=1:length(errXY)
     dPx2(1,i)=sqrt(errXY(1:2,i)'*errXY(1:2,i));
 end
 
-medHor=median(dPx2)
-stdHor=std(dPx2)
-maxHor=max(dPx2)
+medHor=median(dPx2);
+stdHor=std(dPx2);
+maxHor=max(dPx2);
 
-RMSE_e=sqrt(mean((xyz(1,:)-gpsLongerXYZ(1,:)).^2)) %R Mean Squared Error
-RMSE_n=sqrt(mean((xyz(2,:)-gpsLongerXYZ(2,:)).^2))   %R Mean Squared Error
-RMSE_u=sqrt(mean((xyz(3,:)-gpsLongerXYZ(3,:)).^2))  %R Mean Squared Error
+RMSE_e=sqrt(mean((xyz(1,:)-gpsLongerXYZ(1,:)).^2)); %R Mean Squared Error
+RMSE_n=sqrt(mean((xyz(2,:)-gpsLongerXYZ(2,:)).^2));   %R Mean Squared Error
+RMSE_u=sqrt(mean((xyz(3,:)-gpsLongerXYZ(3,:)).^2)); %R Mean Squared Error
+
+fprintf('_________\nHorizontal Error \n Median= %.5f m , std= %.5f m, Max= %.5f m \n--------\n', medHor,stdHor,maxHor);
+fprintf('RMSE \n East= %.5f m , North= %.5f m, Up= %.5f m \n_________\n', RMSE_e,RMSE_n,RMSE_u);
 end
 figGen
 % hold off
@@ -119,13 +122,70 @@ figGen
 % xlabel('time')
 % legend('show');
 % % figure;plot(tTimu-tTimu(1),dPx)
-figure;plot(tTimu-tTimu(1),dPx2)
+% LimitSlipVal(1,:)=(find(dPxSlip<2.00));
+% thresholdSlip=LimitSlipVal(1,end);
+figure;plot(tTimu-tTimu(1),dPx2,'DisplayName', 'HorizontalError')
+hold on
 if odomUpdate()
 hold on; 
 if (length(dPxSlip)==length(timeCountSimu(1:end-1)))
-    plot(timeCountSimu(1:end-1)-tTimu(1),dPxSlip);
+    plot(timeCountSimu(1:end-1)-tTimu(1),dPxSlip(1:end),'DisplayName', 'PredictedError');
 else
-    plot(timeCountSimu-tTimu(1),dPxSlip);
+    plot(timeCountSimu(1:end)-tTimu(1),dPxSlip(1:end),'DisplayName', 'PredictedError');
 end
 end
-hold on;plot(tTimu-tTimu(1),dPx)
+hold on;plot(tTimu-tTimu(1),dPx,'DisplayName','FilterEstimatedError')
+ylabel('{err}(m)')
+xlabel('time(s)')
+legend('show');
+
+
+LimitSlipVal(1,:)=(find(dPxSlip<2.00));
+thresholdSlip=LimitSlipVal(1,end);
+figure;plot(tTimu-tTimu(1),dPx2,'DisplayName', 'HorizontalError')
+hold on
+if odomUpdate()
+hold on; 
+if (length(dPxSlip(1:thresholdSlip))==length(timeCountSimu(1:thresholdSlip-1)))
+    plot(timeCountSimu(1:endthresholdSlip-1)-tTimu(1),dPxSlip(1:thresholdSlip),'DisplayName', 'PredictedError');
+else
+    plot(timeCountSimu(1:thresholdSlip)-tTimu(1),dPxSlip(1:thresholdSlip),'DisplayName', 'PredictedError');
+end
+end
+hold on;plot(tTimu-tTimu(1),dPx,'DisplayName','FilterEstimatedError')
+ylabel('{err}(m)')
+xlabel('time(s)')
+legend('show');
+
+figure;plot(tTimu-tTimu(1),dPx2,'-k','DisplayName', 'HorizontalError ')
+if odomUpdate()
+hold on; 
+if (length(dPxSlip)==length(timeCountSimu(1:end-1)))
+    plot(timeCountSimu(1:end-1)-tTimu(1),dPxSlip,'-g','DisplayName', 'PredictedError');
+else
+    plot(timeCountSimu-tTimu(1),dPxSlip,'-g','DisplayName', 'PredictedError');
+end
+end
+hold on;plot(tTimu-tTimu(1),dPx,'-r','DisplayName','FilterEstimatedError')
+if odomUpdate()
+    hold on
+if (length(dPxSlip)==length(timeCountSimu(1:end-1)))
+    plot(timeCountSimu(1:end-1)-tTimu(1),-dPxSlip,'-g');
+else
+    plot(timeCountSimu-tTimu(1),-dPxSlip,'-g');
+end
+end
+plot(tTimu-tTimu(1),-dPx2,'-k')
+plot(tTimu-tTimu(1),-dPx,'-r')
+ylabel('{err}(m)')
+xlabel('time(s)')
+if (odomUpdate== true && zeroUpdate==true && nonHolo==true)
+title(' Z+O+N')
+elseif(odomUpdate== false && zeroUpdate==true && nonHolo==true)
+    title(' Z+N')
+elseif(odomUpdate== true && zeroUpdate==false && nonHolo==true)
+    title(' O+N')
+elseif(odomUpdate== true && zeroUpdate==true && nonHolo==false)
+    title(' Z+O')
+end
+legend({'Horizontal Error','Predicted Error', 'Filter Estimated Error'})

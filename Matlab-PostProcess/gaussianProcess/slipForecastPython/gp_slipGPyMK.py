@@ -3,7 +3,8 @@ from matplotlib import pyplot as plt
 import numpy as np
 import scipy.io as sio
 from utils.data import *
-DIR='C:\\Users\\Cagri Kilic\\Desktop\\pathfinderFast\\pathfinder_test_2019-08-25\\scenario2_long\\scripts\\cagriGPcodes\\slipForecastPython'
+#DIR='C:\\Users\\Cagri Kilic\\Desktop\\pathfinderFast\\pathfinder_test_2019-08-25\\scenario2_long\\scripts\\cagriGPcodes\\slipForecastPython'
+DIR='C:\\Users\\k_cag\Desktop\corenav-GP-matlab\\gaussianProcess\\slipForecastPython'
 data = load_slip(DIR+"/slipVal.csv")
 X = np.array(range(1,len(data)+1)).reshape(len(data),1)
 Y = np.array(data).reshape(len(data),1)

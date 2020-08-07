@@ -2,7 +2,7 @@
 odomUpdate=true;
 zeroUpdate=true;
 nonHolo=true;
-backProp=true;
+backProp=false;
 gpsResults=true;
 %% 
 L=length(tTimu);
@@ -19,17 +19,17 @@ bg(:,1)=[std(Gx(1:200));std(Gy(1:200));std(Gz(1:200))];
 A=0.272; % meter  0.544/2 distance from IMU to Wheel
 % initHead=atan2(cos(lat1)*sin(lat2)-sin(lat1)*cos(lat2)*cos(lon2-lon1),sin(lon2-lon1)*cos(lat2));
 % T_r=0.125; % rear track width m
-% s_or=0;
+s_or=0;
 % sigma_or_L=.03;%0.03
 % sigma_or_R=.03;%0.03
 % sigma_cmc=.05;
-% s_delta_or=0;
+s_delta_or=0;
 T_r=0.685;%0.685; % rear track width m
-s_or=-0.07;
+% s_or=-0.07;
 sigma_or_L=.03;%0.03
 sigma_or_R=.03;%0.03
 sigma_cmc=.05;
-s_delta_or=-0.6;
+% s_delta_or=-0.6;
 
 x_err=zeros(15,1);
 transportRate=zeros(1,L);

@@ -3,25 +3,33 @@
 %%  -----------------------------------------------------------------------
 % clc;
 clear;
-load data\shortrun1.mat % LshapeData.mat %ForwardDrive.mat
+load data/testrun9_2.mat % LshapeData.mat %ForwardDrive.mat
 % gpsHeading
-yaw=143;
+yaw=151.5;
+yawRad=yaw*pi/180
 %s1320,s5.313% s5:313%s3s4:134%-s1t7-319 %shrt1:143
-%t1:194.5,t8-t6-t4-t2:312.5 t9:151.5,t3:158.5 t5=167.5  t10:47 t11:238,
-%t8:308,t4:312,5, t6:315, longrun:283
+%t1:194.5,t8-t6-t4-t2:312.5 t9:151.5,t3:158.5 t5=167.5 t7= t10:47 t11:238,
+%t8:306.5,t4:312,5, t6:315, longrun:283
 %% initialize variables
 MainRunInit2 % LshapeInit.mat %ForwardDriveInit.mat
+psiEst=insAtt(3,1);
 %% odometry calculations
 odom
-%% Double Low Pass Filter
-% dema
+
 for i=2:L
     dtIMU=tTimu(i)-tTimu(i-1); % calculates imu delta time from rostomat output tTimu
     TimeIMU(i)=dtIMU+TimeIMU(i-1); % creates imu time from delta time starting from zero
-    %% IMU mounting orientation for BadgerRover
-    omega_b_ib=[Gx(i),Gy(i),Gz(i)]-bg(:,i-1)'; %rad/s IMU gyro outputs minus estimated gyro bias
-    f_ib_b = [Ax(i),Ay(i),Az(i)]-ba(:,i-1)'; %m/s^2 IMU acceleration minus estimated acce bias
-    v_ib_b= f_ib_b* dtIMU; %m/s acceleration times delta IMU = velocity
+    
+    omega_b_ib=[Gx(i-1),Gy(i-1),Gz(i-1)]-bg(:,i-1)';
+    alpha_ib_b =omega_b_ib*dtIMU;
+    mag_alpha = sqrt(alpha_ib_b' * alpha_ib_b);
+    Alpha_ib_b = Skew_symmetric(alpha_ib_b); 
+    
+    f_ib_b = [Ax(i-1),Ay(i-1),Az(i-1)]-ba(:,i-1)'; %m/s^2 IMU acceleration minus estimated acce bias
+    v_ib_b= f_ib_b* dtIMU; %m/s acceleraion times delta IMU = velocity
+    
+    psiEst_minus=insAtt(3,i-1);
+    
     %% Attitude Update
     [insAttPlus, Cb2nPlus,Cb2nMinus,Omega_n_en,Omega_n_ie,R_N,R_E,omega_n_in,omega_n_ie] = AttUpdate(insAtt(:,i-1),omega_ie,insLLH(:,i-1),omega_b_ib,ecc,Ro,insVel(:,i-1),dtIMU);
     insAtt(:,i)=insAttPlus;
@@ -40,7 +48,7 @@ for i=2:L
     F21= -skewsymm(Cb2nPlus*(f_ib_b'));
     Q=getQins(F21,Cb2nPlus,insLLH(:,i),R_N,R_E,dtIMU);
     %% P matrix
-    P = STM*P*STM' + Q; 
+    P = STM*P*STM' + Q;
     %% positiveDefiniteCheck of P and Q matrices
     positiveDefiniteCheck
     %% store fixed values before GP
@@ -56,74 +64,36 @@ for i=2:L
     if nonHolo()
         [insAtt(:,i),insVel(:,i),insLLH(:,i),x_err,P]= nonHolonomic(ang_z(kk),insVel(:,i),insAtt(:,i),insLLH(:,i),x_err,P,omega_n_ie,omega_b_ib,A);
     end
+    
+    if abs(rearVel(kk))<0.005 && sign(frontRightVel(kk))*sign(frontLeftVel(kk))~=1% triggers zupt
+        zeroUptCount=zeroUptCount+1;
+        if zeroUpdate == true % && kk<50
+            [insVel(:,i),insAtt(:,i),insLLH(:,i),x_err,P,postFitZero] = zeroUpd(insVel(:,i),insAtt(:,i),insLLH(:,i),x_err,P,omega_b_ib);
+        end
+        zCtr(i)=cttr3+offsetCtr;
+        LLHcorrected(:,cttr3)=insLLH(:,i);
+        cttr3=cttr3+1;
+    else
+        zCtr(i)=0;
+        offsetCtr=offsetCtr+1;
+    end 
+
     xState{1,i}=x_err;
     PStore{1,i}=P;
     STMStore{1,i}=STM+eye(15).*x_err;
+    
     %% Check for wheel odometry update availability
-    if kk<min(min(length(heading),length(lin_x))) % Only valid for post-processing
+    if kk<min(min(length(heading),length(lin_x))) 
         if tTimu(i)>=tTodom(kk) % Odometry update is available
-            bb(counter)=i; % counts for the number of `i` when the loop goes into odometry updates
-            dt_odom=tTodom(kk)-tTodom(kk-1);
-            %% Odometry Update
-            if odomUpdate()
-                odomUptCount=odomUptCount+1;
-                P_old=P;
-                insAtt_old= insAtt(:,i);
-                insVel_old= insVel(:,i);
-                insLLH_old= insLLH(:,i);
-                x_err_old=x_err;
-                [insAtt(:,i),insVel(:,i),insLLH(:,i),x_err,P,postFitOdom]= odomUpt(insVel(:,i),insAtt(:,i),insLLH(:,i),x_err,P,...
-                    insAtt(:,i-1),insAtt(3,bb(counter-1)),dt_odom,rearVel(kk),headRate(kk),s_or,...
-                    H11,H12,H21,H31,H32,H41,H42,z11,z21,z31,z41,T_r,...
-                    sigma_or_L,sigma_or_R,sigma_cmc,s_delta_or);
-                %% Slip Calculation
-                slipCalculation
-                %% GP process
-                gpProcess
-                %% Store detected slipped locations
-                if abs(slipBL(1,odomUptCount))>0.2 || abs(slipBR(1,odomUptCount))>0.2 || abs(slipFL(1,odomUptCount))>0.2 || abs(slipFR(1,odomUptCount))>0.2
-                    LLHcorrected1(:,cttr0)=insLLH(:,i);
-                    cttr0=cttr0+1;
-                end
-            end % odom update
-            %% Destroy H and z values for the next values
-            H11=zeros(1,3);
-            H12=zeros(1,3);
-            H21=zeros(1,3);
-            H31=zeros(1,3);
-            H32=zeros(1,3);
-            H24=zeros(1,3);
-            H41=zeros(1,3);
-            H42=zeros(1,3);
-            z11=0;
-            z21=0;
-            z31=0;
-            z41=0;
-            counter=counter+1;
-            kk=kk+1;
-        end % odom update not available
-        %% Check if Zero Update is available with wheel velocity
-        if abs(rearVel(kk))<0.005 && sign(frontRightVel(kk))*sign(frontLeftVel(kk))~=1% triggers zupt
-            zeroUptCount=zeroUptCount+1;
-            if zeroUpdate == true % && kk<50
-              
-                [insVel(:,i),insAtt(:,i),insLLH(:,i),x_err,P,postFitZero] = zeroUpd(insVel(:,i),insAtt(:,i),insLLH(:,i),x_err,P,omega_b_ib);
-            end
-            zCtr(i)=cttr3+offsetCtr;
-            LLHcorrected(:,cttr3)=insLLH(:,i);
-            cttr3=cttr3+1;
-        else
-            zCtr(i)=0;
-            offsetCtr=offsetCtr+1;
-        end % zero update not available
-        %% Back Propagation
-        if backProp()
-            backPropagation
-        else
-            ba(1:3,i)=x_err(10:12);
-            bg(1:3,i)=x_err(13:15);
+            odometryUpdate
         end
     end
+    
+    ba(1:3,i)=ba(1:3,i-1)+x_err(10:12);
+    bg(1:3,i)=bg(1:3,i-1)+x_err(13:15);
+    
+    x_err(10:12) = [0;0;0];
+    x_err(13:15) = [0;0;0];
     
     sig1(i)=3*sqrt(abs(P(1,1))); % 3 sigma values of att_x -roll
     sig2(i)=3*sqrt(abs(P(2,2))); % 3 sigma values of att_y -pitch
@@ -140,17 +110,19 @@ for i=2:L
     if gpsResults()
         gpsLonger(:,i)=[llhGPS(1,kk);llhGPS(2,kk);llhGPS(end,kk)];
     end
-    x_State(:,i)=[insAtt(:,i);insVel(:,i);insLLH(:,i);ba(:,i);bg(:,i)];
+    %     x_State(:,i)=[insAtt(:,i);insVel(:,i);insLLH(:,i);ba(:,i);bg(:,i)];
+    %     v_in(i)=[1,0,0]*Cn2b_corr*(insVel(:,i));
+    %     insAttCorr(:,i)=dcm2eulr((eye(3)-skewsymm(x_err(1:3)))*Cn2b_corr');
+    %     insVelCorr(:,i)=insVel(:,i)-x_err(4:6);
+    %     insLLHCorr(:,i)=insLLH(:,i)-x_err(7:9);
     Cn2b_corr= eulr2dcm(insAtt(:,i));
     v_in(i)=[1,0,0]*Cn2b_corr*(insVel(:,i));
-    insAttCorr(:,i)=dcm2eulr((eye(3)-skewsymm(x_err(1:3)))*Cn2b_corr');
-    insVelCorr(:,i)=insVel(:,i)-x_err(4:6);
-    insLLHCorr(:,i)=insLLH(:,i)-x_err(7:9);
+    insAttCorr(:,i)=insAtt(:,i);
+    insVelCorr(:,i)=insVel(:,i);
+    insLLHCorr(:,i)=insLLH(:,i);
 end
 gpsLonger(:,1)=gpsLonger(:,2);
-figureGeneration
 
-% figure;plot(tTodom-tTodom(1),rearVel)
-% figure;plot(tTodom(1:end-1)-tTodom(1),v)
-% figure;plot(tTimu-tTimu(1),v_in)
-% figure;plot(tTodom(1:end-1)-tTodom(1),slipR)
+figureGeneration
+figure;plot(tTodom-tTodom(1),bearing);
+figure;plot(tTimu-tTimu(1),YawErr2);

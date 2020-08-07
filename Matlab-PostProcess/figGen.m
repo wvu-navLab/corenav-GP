@@ -1,22 +1,22 @@
 h(1)=figure;
 subplot(311),
 hold on
-plot(TimeIMU,insAtt(1,:)*180/pi,'-.r','DisplayName','estimation')
+plot(TimeIMU,insAtt(1,:),'r','DisplayName','estimation')
 % hold on
 % plot(TimeIMU,sig1(1,:)*180/pi,'-.b','DisplayName','Cov')
 ylabel('\phi_E_s_t (deg)')
 legend('show');
 
-PitchErr2=x_err(2,:)*180/pi;%*180/pi;
+PitchErr2=x_err(2,:);%*180/pi;
 subplot(312),
 hold on
-plot(TimeIMU,insAtt(2,:)*180/pi,'-.r','DisplayName','Model')
+plot(TimeIMU,insAtt(2,:),'r','DisplayName','Model')
 ylabel('\theta_E_s_t (deg)')
 legend('show');
-YawErr2=insAtt(3,:)*180/pi;%*180/pi;
+YawErr2=insAtt(3,:);%*180/pi;
 subplot(313),
 hold on
-plot(TimeIMU,YawErr2,'-.r','DisplayName','Model')
+plot(TimeIMU,YawErr2,'r','DisplayName','Model')
 ylabel('\psi_E_s_t (deg)')
 
 

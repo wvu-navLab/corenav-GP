@@ -11,10 +11,10 @@
         H41= H41+ [0,0,1]*Cn2bPlus*skewsymm(insVel(:,i))*dtIMU;
         H42= H42+ [0,0,1]*Cn2bPlus*dtIMU;
         %% Measurement Innovation -- integration part for INS -- eq 16.42
-        z11=z11+[1,0,0]*(Cn2bPlus*insVel(:,i) + skewsymm(omega_b_eb)*[-A,0,0]')*dtIMU; %lbr : body to rear wheel
+        z11=z11+[1,0,0]*(Cn2bPlus*insVel(:,i) + skewsymm(omega_b_eb)*[-0.685/2,0,-0.22]')*dtIMU; %lbr : body to rear wheel
         z21=z21+cos(insAtt(2,i))*dtIMU;
-        z31=z31+[0,1,0]*(Cn2bPlus*insVel(:,i) + skewsymm(omega_b_eb)*[-A,0,0]')*dtIMU;
-        z41=z41+[0,0,1]*(Cn2bPlus*insVel(:,i) + skewsymm(omega_b_eb)*[-A,0,0]')*dtIMU;
+        z31=z31+[0,1,0]*(Cn2bPlus*insVel(:,i) + skewsymm(omega_b_eb)*[-0.685/2,0,-0.22]')*dtIMU;
+        z41=z41+[0,0,1]*(Cn2bPlus*insVel(:,i) + skewsymm(omega_b_eb)*[-0.685/2,0,-0.22]')*dtIMU;
         % z and H values are integrated for IMU only above. When the Odometry
         % update is available (tTimu(i)>=tTodom(kk)) integrated values will be
         % updated by odometry measurements, used in the filter and destroyed.

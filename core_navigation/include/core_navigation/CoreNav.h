@@ -112,7 +112,7 @@ public:
         void Update(const CoreNav::Vector13& odo,const CoreNav::Vector4& joint);
         void Propagate(const CoreNav::Vector6& imu, const CoreNav::Vector13& odo, const CoreNav::Vector3& cmd,const CoreNav::Vector2& encoderLeft,const CoreNav::Vector2& encoderRight,const CoreNav::Vector4& joint);
 //NonHolonomic constraint
-        void NonHolonomic(const CoreNav::Vector3 vel, const CoreNav::Vector3 att, const CoreNav::Vector3 llh, CoreNav::Vector15 errorStates, Eigen::MatrixXd P, CoreNav::Vector3 omega_b_ib);
+        void NonHolonomic(const CoreNav::Vector6& imu,const CoreNav::Vector3 vel, const CoreNav::Vector3 att, const CoreNav::Vector3 llh, CoreNav::Vector15 errorStates, Eigen::MatrixXd P, CoreNav::Vector3 omega_b_ib);
 //Zero vel update
         void zupt(const CoreNav::Vector3 vel, const CoreNav::Vector3 att, const CoreNav::Vector3 llh, CoreNav::Vector15 errorStates, Eigen::MatrixXd P);
 // Zero ang. update
@@ -206,7 +206,7 @@ public:
         CoreNav::Vector15 error_states_; // {pos., vel, att, ba, bg}
         CoreNav::Vector3 ba_;
         CoreNav::Vector3 bg_;
-        CoreNav::Vector3 ins_att_, ins_vel_, ins_pos_, ins_enu_,slip_cn_,savePos, ins_enu_slip, ins_enu_slip3p, ins_enu_slip_3p,ins_pos_llh_,ins_xyz_;
+        CoreNav::Vector3 ins_att_, ins_vel_, ins_pos_, ins_attMinus_, ins_velMinus_, ins_posMinus_, ins_enu_,slip_cn_,savePos, ins_enu_slip, ins_enu_slip3p, ins_enu_slip_3p,ins_pos_llh_,ins_xyz_;
         CoreNav::Vector4 Z_;
         CoreNav::Vector9 ins_cn_;
         CoreNav::Matrix P_, Q_, STM_, P_pred, P;
@@ -219,16 +219,20 @@ public:
         Eigen::Matrix<double, 4, 4> R_IP_1;
         Eigen::Matrix<double, 4, 4> R_IP_2;
         Eigen::Matrix<double, 2, 2> R_holo;
+        Eigen::Matrix<double, 1, 1> R_holoS;
         Eigen::Matrix<double, 15, 4> K_;
         Eigen::Matrix<double, 15, 4> K_pred;
         Eigen::Matrix<double, 15, 3> K_zupt;
         Eigen::Matrix<double, 15, 3> K_zaru;
         Eigen::Matrix<double, 15, 2> K_holo;
+        Eigen::Matrix<double, 15, 1> K_holoS;
         Eigen::Matrix<double, 4, 15> H_;
         Eigen::Matrix<double, 3, 15> H_zupt;
         Eigen::Matrix<double, 3, 15> H_zaru;
         Eigen::Matrix<double, 2, 15> H_holo;
+        Eigen::Matrix<double, 1, 15> H_holoS;
         Eigen::Matrix<double, 2, 1> z_holo;
+        Eigen::Matrix<double, 1, 1> z_holoS;
 
         CoreNav::Vector3 H11_, H12_, H21_, H31_, H32_, H24_, H41_, H42_;
         double z11_, z21_, z31_, z41_;
@@ -244,7 +248,7 @@ public:
         double position_noise_, attitude_noise_, velocity_noise_, bias_noise_;
 
 // initial pose
-        double init_x, init_y, init_z, init_vx, init_vy, init_vz, psiEst;
+        double init_x, init_y, init_z, init_vx, init_vy, init_vz, psiEst,psiEst_minus;
         double init_roll, init_pitch, init_yaw, sigma_x, sigma_y;
         double init_cov_x,init_cov_y,init_cov_z;
         double init_cov_vx,init_cov_vy,init_cov_vz;

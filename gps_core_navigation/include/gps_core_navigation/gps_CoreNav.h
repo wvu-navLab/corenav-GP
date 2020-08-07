@@ -204,7 +204,7 @@ public:
         gps_CoreNav::Vector15 error_states_; // {pos., vel, att, ba, bg}
         gps_CoreNav::Vector3 ba_;
         gps_CoreNav::Vector3 bg_;
-        gps_CoreNav::Vector3 ins_att_, ins_vel_, ins_pos_, ins_enu_,slip_cn_,savePos, ins_enu_slip, ins_enu_slip3p, ins_enu_slip_3p,ins_att_cov_,ins_att_cov_p, ins_vel_cov_,ins_vel_cov_p,ins_pos_cov_,ins_pos_cov_p, ins_xyz_,ins_bias_a,ins_bias_g,ins_pos_llh_;
+        gps_CoreNav::Vector3 ins_att_, ins_vel_, ins_pos_, ins_attMinus_, ins_velMinus_, ins_posMinus_, ins_enu_,slip_cn_,savePos, ins_enu_slip, ins_enu_slip3p, ins_enu_slip_3p,ins_att_cov_,ins_att_cov_p, ins_vel_cov_,ins_vel_cov_p,ins_pos_cov_,ins_pos_cov_p, ins_xyz_,ins_bias_a,ins_bias_g,ins_pos_llh_;
         gps_CoreNav::Vector4 Z_;
         gps_CoreNav::Vector9 ins_cn_;
         gps_CoreNav::Matrix P_, Q_, STM_, P_pred, P;
@@ -246,7 +246,7 @@ public:
         double position_noise_, attitude_noise_, velocity_noise_, bias_noise_;
 
 // initial pose
-        double init_x, init_y, init_z, init_vx, init_vy, init_vz, psiEst;
+        double init_x, init_y, init_z, init_vx, init_vy, init_vz, psiEst, psiEst_minus;
         double init_roll, init_pitch, init_yaw, sigma_x, sigma_y;
         double init_cov_x,init_cov_y,init_cov_z;
         double init_cov_vx,init_cov_vy,init_cov_vz;

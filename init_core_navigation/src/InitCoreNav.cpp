@@ -103,9 +103,9 @@ bool InitCoreNav::RegisterCallbacks(const ros::NodeHandle& n){
         init_ecef_pub_= nl.advertise<geometry_msgs::PointStamped>( "init_ecef", 10, false);
         init_llh_pub_= nl.advertise<geometry_msgs::PointStamped>( "init_llh", 10, false);
 
-        imu_sub_ = nl.subscribe(imu_topic_,  10, &InitCoreNav::ImuCallback, this);
-        gps_llh_sub_=nl.subscribe(gps_llh_topic_, 10, &InitCoreNav::GPSLLHCallBack, this);
-        gps_ecef_sub_=nl.subscribe(gps_ecef_topic_,10, &InitCoreNav::GPSECEFCallBack, this);
+        imu_sub_ = nl.subscribe(imu_topic_,  1, &InitCoreNav::ImuCallback, this);
+        gps_llh_sub_=nl.subscribe(gps_llh_topic_, 1, &InitCoreNav::GPSLLHCallBack, this);
+        gps_ecef_sub_=nl.subscribe(gps_ecef_topic_,1, &InitCoreNav::GPSECEFCallBack, this);
 
         return true;
 }
@@ -117,6 +117,7 @@ void InitCoreNav::Propagate(const InitCoreNav::Vector6& imu,const InitCoreNav::V
           omega_b_ib_(0) += imu[3];
           omega_b_ib_(1) += imu[4];
           omega_b_ib_(2) += imu[5];
+
           f_ib_b_(0) += imu[0];
           f_ib_b_(1) += imu[1];
           f_ib_b_(2) += imu[2];
@@ -132,6 +133,7 @@ void InitCoreNav::Propagate(const InitCoreNav::Vector6& imu,const InitCoreNav::V
           init_ecef(0)=gps_ecef(0);
           init_ecef(1)=gps_ecef(1);
           init_ecef(2)=gps_ecef(2);
+
           init_llh(0)=gps_llh(0);
           init_llh(1)=gps_llh(1);
           init_llh(2)=gps_llh(2);

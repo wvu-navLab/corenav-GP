@@ -85,7 +85,7 @@ bool gps_CoreNav::Init(const ros::NodeHandle& n){
         0,std::pow(0.01,2),0,
         0,0,std::pow(0.0025,2);
 
-        R_holo << 0.05,0,0,0.05;
+        R_holo << 0.05,0,0,0.1;
 
         H11_<< 0.0,0.0,0.0;
         H12_ << 0.0,0.0,0.0;

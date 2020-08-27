@@ -3,7 +3,6 @@
   <param name="/use_sim_time" value="false"/>
 
   <group ns="init_core_nav">
-    <!-- SLAM -->
     <node pkg="init_core_nav"
           name="init_core_nav"
           type="init_core_nav_node"

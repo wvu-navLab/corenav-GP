@@ -1,11 +1,11 @@
 init:
   orientation:
-    x: 0.0
-    y: 0.0
+    # x: 0.0
+    # y: 0.0
     # z: 0.0
     covx: 1.218469679146834e-06
     covy: 1.218469679146834e-06
-    covz: 4.873878716587337e-06
+    covz: 1.218469679146834e-06
   velocity:
     x: 0.0
     y: 0.0
@@ -21,13 +21,13 @@ init:
     covy: 0.0
     covz: 0.0
   std_bias_a:
-    x: 0.01
-    y: 0.01
-    z: 0.01
+    x: 0.017333461987301
+    y: 0.012647240119246
+    z: 0.020974348023053
   std_bias_g:
-    x: 0.0008
-    y: 0.0008
-    z: 0.0008
+    x: 0.000802891989877233
+    y: 0.000904288959007464
+    z: 0.000852026432825422
   # bias:
   #   accel:
   #     x: 7.549135895545244e-04
@@ -45,7 +45,7 @@ init:
 imu:
   publish_hz: 250
   sensor_pub_rate: 250
-  topic: /imu/dataAdis
+  topic: /imu/data
   noise:
     sig_gyro_inRun : 7.757018897752577e-06
     sig_ARW : 2.908882086657216e-05
@@ -79,7 +79,7 @@ frames:
 wheel:
   # T_r_: 0.125
   T_r_: 0.685
-  # s_or_: -0.07
   s_or_: 0.0
-  # s_delta_or_: -0.6
+  # s_or_: 0.0
   s_delta_or_: 0.0
+  # s_delta_or_: 0.0

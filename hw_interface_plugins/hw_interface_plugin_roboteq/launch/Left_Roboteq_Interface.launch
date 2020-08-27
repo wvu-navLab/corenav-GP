@@ -1,9 +1,0 @@
-<launch>
-
-    <rosparam
-                command="load"
-                file="$(find hw_interface_plugin_roboteq)/launch/launch_params/Left_Roboteq_launch_params.yaml"
-                subst_value="true"
-    />
-
-</launch>

@@ -581,7 +581,7 @@ void CoreNav::Update(const CoreNav::Vector13& odo,const CoreNav::Vector4& joint)
           ROS_ERROR_ONCE("VELOCITY IS NaN - Restart required");
         }
 
-if (slip !=0.0 && slip !=-1.0 && slip !=1.0)
+if (slip !=0.0 && slip !=-1.0 && slip !=1.0) //CK: WHEN TO STOP LOGIC STARTS HERE
 {
   if (flag) //this flag is true at the beginning and only true for the first driving, then it is always false --> check line 596.
   {
@@ -703,7 +703,7 @@ if (slip !=0.0 && slip !=-1.0 && slip !=1.0)
     ROS_INFO_ONCE("Stop Recording 2 set at %.2f", stopRecording);
 
   }
-}
+} //CK: WHEN TO STOP LOGIC ENDS HERE
         H11_=zeros3.row(0);
         H12_=zeros3.row(0);
         H21_=zeros3.row(0);

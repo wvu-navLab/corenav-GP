@@ -9,7 +9,7 @@ Slip-aware Navigation Stop Planning for Autonomous Planetary Rover Applications
 Affiliation: [WVU NAVLAB](https://navigationlab.wvu.edu/)<br />
 Maintainer: Cagri Kilic, cakilic@mix.wvu.edu**
 
-<img alt="Architecture" src="docs/corenav2.gif" width="300">
+<img alt="Architecture" src="docs/corenav4.gif" width="300">
 
 ## Publications
 

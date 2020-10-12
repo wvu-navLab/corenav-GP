@@ -1,3 +1,5 @@
+<img alt="Architecture" src="docs/corenav4.gif" width="300">
+
 # Core Navigation - Gaussian Process (CN-GP)
 
 ## Overview
@@ -9,7 +11,6 @@ Slip-aware Navigation Stop Planning for Autonomous Planetary Rover Applications
 Affiliation: [WVU NAVLAB](https://navigationlab.wvu.edu/)<br />
 Maintainer: Cagri Kilic, cakilic@mix.wvu.edu**
 
-<img alt="Architecture" src="docs/corenav4.gif" width="300">
 
 ## Publications
 

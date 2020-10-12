@@ -1,6 +1,8 @@
-# Core Navigation - Gaussian Process (CN-GP)
-
+<p align="center">
 <img alt="Architecture" src="docs/corenav4.gif" width="300">
+</p>
+
+## Core Navigation - Gaussian Process (CN-GP)
 
 ## Overview
 Slip-aware Navigation Stop Planning for Autonomous Planetary Rover Applications

@@ -1,0 +1,17 @@
+<!-- This defines a c++ library (.o/.so file) to load -->
+ <!-- Using catkin_make, this filewill always be in the devel folder -->
+
+<!-- 'path' always starts with 'lib/'. Using the library export -->
+    <!-- definition in the CMakeLists, this definition is on line 125 of the CMakeList in the package, add 'lib' to the -->
+    <!-- beginning and copy it here -->
+
+<!-- 'class type' is the full class type name including its namespace definition -->
+<!-- 'base_class_type' is always 'base_classes::base_interface' -->
+
+<!-- description is whatever you want, something funny/serious, your choice. Make it identifable :) -->
+
+<library path="lib/libhw_interface_plugin_adis_imu_serial">
+  <class type="hw_interface_plugin_adis_imu::adis_imu_serial" base_class_type="base_classes::base_interface">
+    <description>This is a serial interface for the ADIS IMU system</description>
+  </class>
+</library>

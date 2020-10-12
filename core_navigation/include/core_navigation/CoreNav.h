@@ -53,6 +53,7 @@
 #include <core_nav/GP_Input.h>
 #include <core_nav/GP_Output.h>
 #include <std_msgs/Float64.h>
+#include <core_navigation/ICEclass.h>
 class CoreNav {
 public:
 
@@ -108,6 +109,14 @@ public:
         void EncoderRightCallBack(const EncoderRightData& encoderRight_data_);
 
         void GPCallBack(const core_nav::GP_Output::ConstPtr& gp_data_in_);
+
+        double derivcost(double, double);
+        void normalUpdate(Eigen::RowVectorXd res);
+        void huberUpdate(Eigen::RowVectorXd res);
+        void orkf1Update(Eigen::RowVectorXd res);
+        void orkf2Update(Eigen::RowVectorXd res);
+        void orkf3Update(Eigen::RowVectorXd res);
+        void orkf4Update(Eigen::RowVectorXd res);
 
         void Update(const CoreNav::Vector13& odo,const CoreNav::Vector4& joint);
         void Propagate(const CoreNav::Vector6& imu, const CoreNav::Vector13& odo, const CoreNav::Vector3& cmd,const CoreNav::Vector2& encoderLeft,const CoreNav::Vector2& encoderRight,const CoreNav::Vector4& joint);
@@ -266,6 +275,8 @@ public:
         int slip_i, i;
         double xy_errSlip;
         double odomUptCount, startRecording, stopRecording, saveCountOdom;
+        ICEclass iceclass;
+        Eigen::RowVectorXd residual;
 
 };
 #endif

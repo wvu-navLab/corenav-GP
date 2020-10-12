@@ -1,0 +1,17 @@
+<?xml version="1.0"?>
+<!-- this launch file simply loads the each plugins' launch file -->
+
+<!--
+<launch>
+    <include file="$(find hw_interface_plugin_adis_imu)/launch/Adis_Imu_Serial_Interface.launch" />
+</launch>
+
+-->
+
+<launch>
+    <include file="$(find hw_interface_plugin_roboteq)/launch/Left_Roboteq_Interface.launch" />
+
+    <include file="$(find hw_interface_plugin_roboteq)/launch/Right_Roboteq_Interface.launch" />
+    
+    <include file="$(find hw_interface_plugin_adis_imu)/launch/Adis_Imu_Serial_Interface.launch" />
+</launch>

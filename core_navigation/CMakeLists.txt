@@ -15,6 +15,7 @@ find_package(catkin REQUIRED COMPONENTS
   tf
   std_msgs
   message_generation
+  libcluster
 )
 
 add_message_files(
@@ -39,6 +40,7 @@ catkin_package(
     sensor_msgs
     tf2_ros
     tf
+    libcluster
 )
 
 include_directories(
@@ -50,12 +52,22 @@ link_directories(
   ${catkin_LIBRARY_DIRS}
 )
 
-add_library(${PROJECT_NAME} src/CoreNav.cpp)
+file(GLOB SOURCES "src/*.cpp")
+add_library(${PROJECT_NAME} SHARED ${SOURCES})
+
+#add_library(${PROJECT_NAME} src/CoreNav.cpp)
 target_link_libraries(${PROJECT_NAME}
   ${catkin_LIBRARIES}
 )
 
 add_executable(${PROJECT_NAME}_node src/${PROJECT_NAME}.cpp)
+
+target_link_libraries(${PROJECT_NAME}
+  ${catkin_LIBRARIES}
+  ${PROJECT_NAME} ~/robust_ws/src/corenav-GP/libcluster/lib/libcluster.so
+  #${PROJECT_NAME} ~/trial_ws/src/SRC2-localization-ins/libcluster/lib/libcluster.so
+  #${PROJECT_NAME} ~/srcp2-competitors/ros_workspace/src/rover_localization/corenav_moon/libcluster/lib/libcluster.so
+)
 target_link_libraries(${PROJECT_NAME}_node
   ${PROJECT_NAME}
   ${catkin_LIBRARIES}

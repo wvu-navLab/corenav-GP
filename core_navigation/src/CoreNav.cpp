@@ -7,6 +7,8 @@
 #include <parameter_utils/ParameterUtils.h>
 #include <geometry_msgs/TransformStamped.h>
 #include <hw_interface_plugin_roboteq/RoboteqData.h>
+#include <unsupported/Eigen/MatrixFunctions>
+#include <core_navigation/ICEclass.h>
 namespace pu = parameter_utils;
 namespace gu = geometry_utils;
 namespace gr = gu::ros;
@@ -492,6 +494,24 @@ void CoreNav::Propagate(const CoreNav::Vector6& imu, const CoreNav::Vector13& od
         return;
 }
 
+double CoreNav::derivcost(double z, double delta)
+{
+        if(std::abs(z) > delta){
+          if (z > 0) {
+            return delta;
+          }
+          else if (z < 0){
+            return -1*delta;
+          }
+          else{
+            return 0.0;
+          }
+        }
+        else {
+          return z;
+        }
+}
+
 void CoreNav::Update(const CoreNav::Vector13& odo,const CoreNav::Vector4& joint){
 
         odomUptCount=odomUptCount+1;
@@ -542,9 +562,18 @@ void CoreNav::Update(const CoreNav::Vector13& odo,const CoreNav::Vector4& joint)
         H_.row(2)<<H31_.transpose(), H32_.transpose(), zeros3.row(0), zeros3.row(0),zeros3.row(0);
         H_.row(3)<<H41_.transpose(), H42_.transpose(), zeros3.row(0), zeros3.row(0),zeros3.row(0);
 
-        K_ << P_*H_.transpose()*(H_*P_*H_.transpose()+R_).inverse();
+        Eigen::RowVectorXd res(4);
 
-        error_states_ = error_states_+K_*(Z_-H_*error_states_);
+        res = Z_-H_*error_states_ ;
+
+        //  ADD UPDATE FUNCTION HERE  // *********************************************************
+      //****************************************************************************************
+        //normalUpdate(res);   // Standard filter
+        //huberUpdate(res);  // Huber-ICE filter (Karlgraad + Ryan)
+        orkf2Update(res);  // Variational Filter by Sarkka
+        //orkf1Update(res);  // Variational Filter by Agememnoni
+        //orkf3Update(res);  // Covariance Scaling filter by Yang
+        //orkf4Update(res);  // Another scaling filter by Chang
 
         ins_att_ = CoreNav::dcm_to_eul((Eigen::MatrixXd::Identity(3,3)- CoreNav::skew_symm(error_states_.segment(0,3)))*Cn2bUnc.transpose());
         ins_vel_ = ins_vel_ - error_states_.segment(3,3);
@@ -558,7 +587,6 @@ void CoreNav::Update(const CoreNav::Vector13& odo,const CoreNav::Vector4& joint)
 
         error_states_.segment(0,9)<<Eigen::VectorXd::Zero(9);
 
-        P_=(Eigen::MatrixXd::Identity(15,15) - K_*H_) * P_* ( Eigen::MatrixXd::Identity(15,15) - K_ * H_ ).transpose() + K_ * R_ * K_.transpose();
 
         double vlin=eye3.row(0)*(Cn2bUnc*ins_vel_);
         double slip= std::max(std::max(((velFrontRight_)-vlin)/(velFrontRight_),((velBackRight_)-vlin)/(velBackRight_)),std::max(((velFrontLeft_)-vlin)/(velFrontLeft_),((velBackLeft_)-vlin)/(velBackLeft_)));
@@ -581,129 +609,129 @@ void CoreNav::Update(const CoreNav::Vector13& odo,const CoreNav::Vector4& joint)
           ROS_ERROR_ONCE("VELOCITY IS NaN - Restart required");
         }
 
-if (slip !=0.0 && slip !=-1.0 && slip !=1.0) //CK: WHEN TO STOP LOGIC STARTS HERE
-{
-  if (flag) //this flag is true at the beginning and only true for the first driving, then it is always false --> check line 596.
-  {
-    ROS_WARN_ONCE("Driving Started at %.2f sec", odomUptCount/10.0);
-    saveCountOdom= odomUptCount;
-    startRecording=saveCountOdom+10;
-    stopRecording=startRecording+150;
-    ROS_INFO_ONCE("Recording will be started at %.2f sec", startRecording/10.0);
-    ROS_INFO_ONCE("Recording will be stopped at %.2f sec", stopRecording/10.0);
-    // ROS_ERROR("XYerror1 %.12f meters", xy_errSlip);
-
-    flag=false;
-  }
-
-  if (odomUptCount > startRecording && odomUptCount < stopRecording && !gp_flag) //between startRecording and stopRecording counts, 1 count is 0.1 second. and if gp_flag is false. gp_flag is initialized as false.
-  {
-
-    if (std::isnan(slip)) {
-      ROS_ERROR_ONCE("SLIP IS NaN - Restart required");
-    }
-    ROS_WARN_THROTTLE(10,"Recording GP Input between %.2f sec and %.2f sec",startRecording/10.0,stopRecording/10.0);
-    //record slip message as recorded slips and time(as 0.1 second interval->odomUptCount)
-    slip_msg.slip_array.push_back(slip);
-    slip_msg.time_array.push_back(odomUptCount);
-
-
-  }
-  if (odomUptCount==stopRecording) // When the odomUptCount is equal to the stop recording time
-  {
-    savePos=ins_pos_;
-    P_pred=P_;
-
-    if(!gp_flag) //and if gp_flag is false make the gp_flag true, and publish the slip_msg to Gaussian Process, then delete the data.
-    {
-            ROS_WARN("Publishing GP Input at %.2f sec", stopRecording/10.0);
-            gp_flag=true;
-            gp_pub.publish(slip_msg);
-            slip_msg.slip_array.clear();
-            slip_msg.time_array.clear();
-    }
-    // std::cout << "savePos" << '\n'<< savePos << '\n';
-    // ROS_WARN("At %.2f,  Saved Position Lat= %.6f, Lon=%.6f, Height=%.6f",odomUptCount,savePos(0),savePos(1),savePos(2));
-
-    if(new_gp_data_arrived_) // This will happen after Gaussian Process publishes its results, check line 726. It initialized as false.
-    {
-        for(int slip_i=0; slip_i<25*gp_data_.mean.size(); slip_i++)
-        {
-            P_pred = STM_*P_pred*STM_.transpose() + Q_;
-            if ((slip_i % 25) ==0)
-            {
-            double chi0_slip=gp_data_.mean.at(i);
-            double chi1_slip=gp_data_.mean.at(i)+gp_data_.sigma.at(i);
-            double chi2_slip=gp_data_.mean.at(i)-gp_data_.sigma.at(i);
-
-            double chi0_odo=0.8/(1.0-chi0_slip);
-            double chi1_odo=0.8/(1.0-chi1_slip);
-            double chi2_odo=0.8/(1.0-chi2_slip);
-
-            double chi_UT_est=(chi0_odo+chi1_odo+chi2_odo)/3.0;
-            double chi_UT_est_cov=((chi0_odo-chi_UT_est)*(chi0_odo-chi_UT_est)+(chi1_odo-chi_UT_est)*(chi1_odo-chi_UT_est)+(chi2_odo-chi_UT_est)*(chi2_odo-chi_UT_est))/3.0;
-
-             R_IP_2<< std::max(0.03*0.03,chi_UT_est_cov*chi_UT_est_cov),0,0,0,
-                      0,std::max(0.03*0.03,chi_UT_est_cov*chi_UT_est_cov),0,0,
-                      0,0,std::max(0.05*0.05,chi_UT_est_cov*chi_UT_est_cov),0,
-                      0,0,0,0.05*0.05;
-
-             R_IP=R_IP_1*R_IP_2*R_IP_1.transpose();
-
-            K_pred=P_pred*H_.transpose()*(H_*P_pred*H_.transpose() +R_IP).inverse();
-            P_pred=(Eigen::MatrixXd::Identity(15,15) - K_pred*H_)*P_pred*(Eigen::MatrixXd::Identity(15,15)-K_pred*H_).transpose()  + K_pred*R_IP*K_pred.transpose();
-            // std::cout << "i:" << i << '\n';
-            i++;
-            }
-            // std::cout << "chi_UT_est:"<< chi_UT_est << '\n';
-            // std::cout << "chi_UT_est_cov:"<< chi_UT_est_cov << '\n';
-            // std::cout << "ppred6:" << 3.0*sqrt(std::abs(P_pred(6,6))) << '\n';
-            // std::cout << "ppred7:" << 3.0*sqrt(std::abs(P_pred(7,7))) << '\n';
-            // std::cout << "ppred8:" << 3.0*sqrt(std::abs(P_pred(8,8))) << '\n';
-
-            ins_enu_slip << CoreNav::llh_to_enu(savePos[0],savePos[1],savePos[2]);
-            ins_enu_slip_3p << CoreNav::llh_to_enu(savePos[0]-3.0*sqrt(std::abs(P_pred(6,6))),savePos[1]-3.0*sqrt(std::abs(P_pred(7,7))), savePos[2]-3.0*sqrt(std::abs(P_pred(8,8))));
-            ins_enu_slip3p << CoreNav::llh_to_enu(savePos[0]+3.0*sqrt(std::abs(P_pred(6,6))),savePos[1]+3.0*sqrt(std::abs(P_pred(7,7))), savePos[2]+3.0*sqrt(std::abs(P_pred(8,8))));
-
-            xy_errSlip = sqrt((ins_enu_slip3p(0)-ins_enu_slip(0))*(ins_enu_slip3p(0)-ins_enu_slip(0)) + (ins_enu_slip3p(1)-ins_enu_slip(1))*(ins_enu_slip3p(1)-ins_enu_slip(1)));
-            ROS_ERROR("XYerror %.6f meters", xy_errSlip);
-            // std::cout << "error" << '\n'<< xy_errSlip << '\n';
-            if (xy_errSlip > 2.00)
-            { //TODO: the error 3.00 meters is too much.
-
-              ROS_ERROR_ONCE("Stop Command Required, error is more than %.2f meters", xy_errSlip);
-              ROS_ERROR_ONCE("Stop command should be set at %u seconds after %.2f sec driving",i/10,odomUptCount/10.0);
-              if (gp_arrived_time_ + i/10.0 - ros::Time::now().toSec()<0.0) // if the results from GP arrival time and the time for each odometry update sum is less then the current time stop immediately. This means delta time is negative--we needed to stop earlier.
-              {
-              // if (gp_arrived_time_ + i/10.0 <0.0) {
-                stop_cmd_msg_.data = 0.5;
-              }
-              else //otherwise calculate the necessary time for stopping -- when do we need to stop from now.
-              {
-                stop_cmd_msg_.data = gp_arrived_time_ + i/10.0 - ros::Time::now().toSec();
-                // stop_cmd_msg_.data = gp_arrived_time_ + i/10.0 ;
-
-              }
-              stop_cmd_pub_.publish(stop_cmd_msg_); //publish the delta time required to stop.
-              ROS_ERROR_ONCE("delta_time = %.3f", stop_cmd_msg_.data);
-
-              break; // then break the for loop.
-            }
-        }
-        // std::cout << "error2" << '\n'<< xy_errSlip << '\n';
-        // std::cout << "slip_i2" << '\n'<< slip_i << '\n';
-        new_gp_data_arrived_ = false; // Set the flag back to false, so that this does not happen again until new data comes in on the subscriber callback and sets this flag back to true
-        i=0.0;
-        slip_i=0.0;
-    }
-
-    startRecording=stopRecording; // Do we need a buffer time? Since we are stopping 3 seconds, and there could be some other time added to the process...idk...
-    stopRecording=startRecording+250; //It should be 150...
-    ROS_INFO_ONCE("Start Recording 2 at %.2f", startRecording);
-    ROS_INFO_ONCE("Stop Recording 2 set at %.2f", stopRecording);
-
-  }
-} //CK: WHEN TO STOP LOGIC ENDS HERE
+// if (slip !=0.0 && slip !=-1.0 && slip !=1.0) //CK: WHEN TO STOP LOGIC STARTS HERE
+// {
+//   if (flag) //this flag is true at the beginning and only true for the first driving, then it is always false --> check line 596.
+//   {
+//     ROS_WARN_ONCE("Driving Started at %.2f sec", odomUptCount/10.0);
+//     saveCountOdom= odomUptCount;
+//     startRecording=saveCountOdom+10;
+//     stopRecording=startRecording+150;
+//     ROS_INFO_ONCE("Recording will be started at %.2f sec", startRecording/10.0);
+//     ROS_INFO_ONCE("Recording will be stopped at %.2f sec", stopRecording/10.0);
+//     // ROS_ERROR("XYerror1 %.12f meters", xy_errSlip);
+//
+//     flag=false;
+//   }
+//
+//   if (odomUptCount > startRecording && odomUptCount < stopRecording && !gp_flag) //between startRecording and stopRecording counts, 1 count is 0.1 second. and if gp_flag is false. gp_flag is initialized as false.
+//   {
+//
+//     if (std::isnan(slip)) {
+//       ROS_ERROR_ONCE("SLIP IS NaN - Restart required");
+//     }
+//     ROS_WARN_THROTTLE(10,"Recording GP Input between %.2f sec and %.2f sec",startRecording/10.0,stopRecording/10.0);
+//     //record slip message as recorded slips and time(as 0.1 second interval->odomUptCount)
+//     slip_msg.slip_array.push_back(slip);
+//     slip_msg.time_array.push_back(odomUptCount);
+//
+//
+//   }
+//   if (odomUptCount==stopRecording) // When the odomUptCount is equal to the stop recording time
+//   {
+//     savePos=ins_pos_;
+//     P_pred=P_;
+//
+//     if(!gp_flag) //and if gp_flag is false make the gp_flag true, and publish the slip_msg to Gaussian Process, then delete the data.
+//     {
+//             ROS_WARN("Publishing GP Input at %.2f sec", stopRecording/10.0);
+//             gp_flag=true;
+//             gp_pub.publish(slip_msg);
+//             slip_msg.slip_array.clear();
+//             slip_msg.time_array.clear();
+//     }
+//     // std::cout << "savePos" << '\n'<< savePos << '\n';
+//     // ROS_WARN("At %.2f,  Saved Position Lat= %.6f, Lon=%.6f, Height=%.6f",odomUptCount,savePos(0),savePos(1),savePos(2));
+//
+//     if(new_gp_data_arrived_) // This will happen after Gaussian Process publishes its results, check line 726. It initialized as false.
+//     {
+//         for(int slip_i=0; slip_i<25*gp_data_.mean.size(); slip_i++)
+//         {
+//             P_pred = STM_*P_pred*STM_.transpose() + Q_;
+//             if ((slip_i % 25) ==0)
+//             {
+//             double chi0_slip=gp_data_.mean.at(i);
+//             double chi1_slip=gp_data_.mean.at(i)+gp_data_.sigma.at(i);
+//             double chi2_slip=gp_data_.mean.at(i)-gp_data_.sigma.at(i);
+//
+//             double chi0_odo=0.8/(1.0-chi0_slip);
+//             double chi1_odo=0.8/(1.0-chi1_slip);
+//             double chi2_odo=0.8/(1.0-chi2_slip);
+//
+//             double chi_UT_est=(chi0_odo+chi1_odo+chi2_odo)/3.0;
+//             double chi_UT_est_cov=((chi0_odo-chi_UT_est)*(chi0_odo-chi_UT_est)+(chi1_odo-chi_UT_est)*(chi1_odo-chi_UT_est)+(chi2_odo-chi_UT_est)*(chi2_odo-chi_UT_est))/3.0;
+//
+//              R_IP_2<< std::max(0.03*0.03,chi_UT_est_cov*chi_UT_est_cov),0,0,0,
+//                       0,std::max(0.03*0.03,chi_UT_est_cov*chi_UT_est_cov),0,0,
+//                       0,0,std::max(0.05*0.05,chi_UT_est_cov*chi_UT_est_cov),0,
+//                       0,0,0,0.05*0.05;
+//
+//              R_IP=R_IP_1*R_IP_2*R_IP_1.transpose();
+//
+//             K_pred=P_pred*H_.transpose()*(H_*P_pred*H_.transpose() +R_IP).inverse();
+//             P_pred=(Eigen::MatrixXd::Identity(15,15) - K_pred*H_)*P_pred*(Eigen::MatrixXd::Identity(15,15)-K_pred*H_).transpose()  + K_pred*R_IP*K_pred.transpose();
+//             // std::cout << "i:" << i << '\n';
+//             i++;
+//             }
+//             // std::cout << "chi_UT_est:"<< chi_UT_est << '\n';
+//             // std::cout << "chi_UT_est_cov:"<< chi_UT_est_cov << '\n';
+//             // std::cout << "ppred6:" << 3.0*sqrt(std::abs(P_pred(6,6))) << '\n';
+//             // std::cout << "ppred7:" << 3.0*sqrt(std::abs(P_pred(7,7))) << '\n';
+//             // std::cout << "ppred8:" << 3.0*sqrt(std::abs(P_pred(8,8))) << '\n';
+//
+//             ins_enu_slip << CoreNav::llh_to_enu(savePos[0],savePos[1],savePos[2]);
+//             ins_enu_slip_3p << CoreNav::llh_to_enu(savePos[0]-3.0*sqrt(std::abs(P_pred(6,6))),savePos[1]-3.0*sqrt(std::abs(P_pred(7,7))), savePos[2]-3.0*sqrt(std::abs(P_pred(8,8))));
+//             ins_enu_slip3p << CoreNav::llh_to_enu(savePos[0]+3.0*sqrt(std::abs(P_pred(6,6))),savePos[1]+3.0*sqrt(std::abs(P_pred(7,7))), savePos[2]+3.0*sqrt(std::abs(P_pred(8,8))));
+//
+//             xy_errSlip = sqrt((ins_enu_slip3p(0)-ins_enu_slip(0))*(ins_enu_slip3p(0)-ins_enu_slip(0)) + (ins_enu_slip3p(1)-ins_enu_slip(1))*(ins_enu_slip3p(1)-ins_enu_slip(1)));
+//             ROS_ERROR("XYerror %.6f meters", xy_errSlip);
+//             // std::cout << "error" << '\n'<< xy_errSlip << '\n';
+//             if (xy_errSlip > 2.00)
+//             { //TODO: the error 3.00 meters is too much.
+//
+//               ROS_ERROR_ONCE("Stop Command Required, error is more than %.2f meters", xy_errSlip);
+//               ROS_ERROR_ONCE("Stop command should be set at %u seconds after %.2f sec driving",i/10,odomUptCount/10.0);
+//               if (gp_arrived_time_ + i/10.0 - ros::Time::now().toSec()<0.0) // if the results from GP arrival time and the time for each odometry update sum is less then the current time stop immediately. This means delta time is negative--we needed to stop earlier.
+//               {
+//               // if (gp_arrived_time_ + i/10.0 <0.0) {
+//                 stop_cmd_msg_.data = 0.5;
+//               }
+//               else //otherwise calculate the necessary time for stopping -- when do we need to stop from now.
+//               {
+//                 stop_cmd_msg_.data = gp_arrived_time_ + i/10.0 - ros::Time::now().toSec();
+//                 // stop_cmd_msg_.data = gp_arrived_time_ + i/10.0 ;
+//
+//               }
+//               stop_cmd_pub_.publish(stop_cmd_msg_); //publish the delta time required to stop.
+//               ROS_ERROR_ONCE("delta_time = %.3f", stop_cmd_msg_.data);
+//
+//               break; // then break the for loop.
+//             }
+//         }
+//         // std::cout << "error2" << '\n'<< xy_errSlip << '\n';
+//         // std::cout << "slip_i2" << '\n'<< slip_i << '\n';
+//         new_gp_data_arrived_ = false; // Set the flag back to false, so that this does not happen again until new data comes in on the subscriber callback and sets this flag back to true
+//         i=0.0;
+//         slip_i=0.0;
+//     }
+//
+//     startRecording=stopRecording; // Do we need a buffer time? Since we are stopping 3 seconds, and there could be some other time added to the process...idk...
+//     stopRecording=startRecording+250; //It should be 150...
+//     ROS_INFO_ONCE("Start Recording 2 at %.2f", startRecording);
+//     ROS_INFO_ONCE("Stop Recording 2 set at %.2f", stopRecording);
+//
+//   }
+// } //CK: WHEN TO STOP LOGIC ENDS HERE
         H11_=zeros3.row(0);
         H12_=zeros3.row(0);
         H21_=zeros3.row(0);
@@ -722,6 +750,293 @@ if (slip !=0.0 && slip !=-1.0 && slip !=1.0) //CK: WHEN TO STOP LOGIC STARTS HER
         PublishStatesSlip(slip_cn_, slip_pub_);
         // ROS_INFO_STREAM("insattitudeafter " << ins_att_);
         return;
+}
+
+
+void CoreNav::normalUpdate(Eigen::RowVectorXd res){
+
+        ROS_INFO_ONCE("Running normal update equations .. ");
+        K_ << P_*H_.transpose()*(H_*P_*H_.transpose()+R_).inverse();
+        error_states_ = error_states_+K_*res.transpose();
+        P_= (Eigen::MatrixXd::Identity(15,15) - K_*H_) * P_ * ( Eigen::MatrixXd::Identity(15,15) - K_ * H_ ).transpose() + K_ * R_ * K_.transpose();
+
+}
+
+void CoreNav::huberUpdate(Eigen::RowVectorXd res){
+
+        iceclass.icefunc(res);
+
+        std::vector<mixtureComponents> globalMixtureModelLatest = iceclass.globalMixtureModel;
+
+        int ind(0);
+        double prob, probMax(0.0);
+        Eigen::MatrixXd cov_min(4,4);     //TODO: is the size okay ?
+        Eigen::RowVectorXd mean_min(4);
+
+        for(int k=0; k<globalMixtureModelLatest.size();k++){
+
+            merge::mixtureComponents mixtureComp = globalMixtureModelLatest[k];
+
+            auto cov = mixtureComp.get<4>();
+
+            Eigen::RowVectorXd mean = mixtureComp.get<3>();
+
+            double quadform  = res* (mixtureComp.get<4>()).inverse() * (res).transpose();
+            double norm = std::pow(std::sqrt(2 * M_PI),-1) * std::pow((mixtureComp.get<4>()).determinant(), -0.5);
+
+            prob = (norm) * exp(-0.5 * quadform);  // select best component
+
+            if (prob >= probMax)
+            {
+                    ind = k;
+                    probMax = prob;
+                    cov_min = mixtureComp.get<4>();
+                    mean_min = mixtureComp.get<3>();
+            }
+          }
+
+      R_ = cov_min;
+      iceclass.all_res_count +=1 ;
+
+      // checking for inlier or outlier
+      double mahalcost(0.0);
+      mahalcost = res*(H_*P_*H_.transpose()+R_).inverse()*res.transpose();
+      double critical_valchi4 = 9.488;
+
+      double scale = mahalcost/critical_valchi4;
+
+      if (scale < 1.0){
+          iceclass.is_outlier = false;
+          R_ = cov_min;
+          iceclass.icefunc(res);
+      }
+      // inflate  the R_ matrix if outlier
+      else{
+          iceclass.is_outlier = true;
+          R_ = R_;
+          iceclass.res_count +=1 ;
+          if (iceclass.res_count == 99){
+          iceclass.merging(res);
+        }
+      }
+
+        Eigen::MatrixXd epCov(19,19);
+        epCov.setZero(19,19);
+
+        epCov.block<15,15>(0,0) = P_;
+        epCov.block<4,4>(15,15) = R_;
+
+        Eigen::LLT<MatrixXd> lltofcov(epCov);
+
+        Eigen::MatrixXd S = lltofcov.matrixL();
+
+        Eigen::MatrixXd Sinv  = S.inverse();
+
+        Eigen::MatrixXd F(19,1);
+
+        F.block<15,1>(0,0) = error_states_;
+        F.block<4,1>(15,0) = Z_;
+
+        Eigen::MatrixXd Y = Sinv*F;
+
+        Eigen::MatrixXd X(19,15);
+
+        X.block<15,15>(0,0) = Eigen::MatrixXd::Identity(15,15);
+        X.block<4,15>(15,0) = H_;
+
+        X = Sinv*X;
+
+        typedef Eigen::Matrix<double, 19, 1> Vector19d;
+        Vector19d omeg;
+
+        double delta = 2.0;
+
+        Eigen::VectorXd error_states_prev = error_states_;
+        double diff(100.0);
+        error_states_prev =  ((X.transpose()*X).inverse())*(X.transpose()*Y);
+        DiagonalMatrix<double, 19 > M;
+        int iter(0);
+        double weight(1);
+        while (diff > 0.000000001){                               // iterative re-weighted least squares
+
+        for (int i = 0; i < 19; i++){
+          if ( (Y(i) - X.row(i)*error_states_) != 0.0 ){
+            if (std::abs(Y(i) - X.row(i)*error_states_) >10){
+              omeg(i) = weight*derivcost((Y(i) - X.row(i)*error_states_prev), delta)/(Y(i) - X.row(i)*error_states_);
+              //cout << "De-weighting......" << endl;
+            }
+            else{
+              omeg(i) = derivcost((Y(i) - X.row(i)*error_states_prev), delta)/(Y(i) - X.row(i)*error_states_);
+              }
+            }
+          else{
+            omeg(i) = 1;
+            //cout << "Omeg is 1" << endl;
+          }
+        }
+
+        M = omeg.asDiagonal();
+        error_states_ = ((X.transpose()*M*X).inverse())*(X.transpose()*M*Y);
+        iter = iter +1;
+
+        diff = (error_states_ - error_states_prev).norm();
+        if (diff < 0.000000001){
+          ROS_INFO("converged --- Going to next epoch");
+        }
+
+        error_states_prev = error_states_;
+      }
+
+      P_ = (X.transpose()*M*X).inverse();
+}
+
+void CoreNav::orkf1Update(Eigen::RowVectorXd res){
+
+      ROS_INFO_ONCE(" Running variational filter ");
+      double likelihood = 0.0;
+      int s = 3;  // s > d-1; d is the dimension of the measurements, here it is 4
+      double threshold = 0.9;
+      MatrixXd R_post(4,4);
+      // double preLikelihood = 2.0;
+
+      R_post = R_;
+
+      double mahalcost(0.0);
+      mahalcost = res*(H_*P_*H_.transpose()+R_).inverse()*res.transpose();
+      double critical_valchi4 = 9.488;
+
+      if (mahalcost > critical_valchi4){
+
+          for (int i = 0; i < 30; i++){
+
+              K_ << P_*H_.transpose()*(H_*P_*H_.transpose()+R_post).inverse();
+
+              error_states_ = error_states_+K_*(Z_-H_*error_states_);
+
+              P_= (Eigen::MatrixXd::Identity(15,15) - K_*H_) * P_ * ( Eigen::MatrixXd::Identity(15,15) - K_ * H_ ).transpose() + K_ * R_post * K_.transpose();
+
+              res = Z_-H_*error_states_ ;
+
+              R_post = (s*R_ + res.transpose()*res + H_*P_*H_.transpose())/(s+1);
+
+              double quad = res*R_post.inverse()*res.transpose();
+
+              likelihood = std::pow((1 + quad/s), -(s+1)/2);
+
+
+              std::cout << "Lilelihood value --  " << likelihood << endl;
+          }
+
+          R_ = R_post;
+      }
+    else{
+              ROS_INFO("  Measurement is inlier ");
+      }
+
+      ROS_INFO(" Converged ... ");
+
+  }
+
+
+void CoreNav::orkf2Update(Eigen::RowVectorXd res){
+
+        double w0 = 0.5;
+        double lambda = 1;
+        double neu = 4; // parameter for gamma prior for lambda
+        double d = 4;
+        int N = 10; // Dimension of the measurements
+        int n = 15; //Dimension of the state
+
+        for(int j = 0; j < N; j++){
+
+          std::vector<CoreNav::Vector15> sigma_pts;
+          sigma_pts.push_back(error_states_);
+
+          std::vector<int> weights(31,(1-w0)/30);
+          weights[0] = w0;
+
+          K_ << P_*H_.transpose()*(H_*P_*H_.transpose()+ (1/lambda)*R_).inverse();
+          error_states_ = error_states_+K_*(Z_-H_*error_states_);
+          P_= (Eigen::MatrixXd::Identity(15,15) - K_*H_) * P_ * ( Eigen::MatrixXd::Identity(15,15) - K_ * H_ ).transpose() + K_ * R_ * K_.transpose();
+
+          CoreNav::Matrix P_sqrt(15,15);
+          cout << " Calculating square root ... " << endl;
+          Eigen::LLT<MatrixXd> lltofcov(P_);
+          Eigen::MatrixXd S = lltofcov.matrixL();
+          P_sqrt = std::pow((n/(1 - w0)),0.5)*S; //calculate the square root of the covariance matrix
+          cout << " Done " << endl;
+          cout << P_sqrt << endl;
+          for(int j = 0; j < 15; j++){
+
+            CoreNav::Vector15 sig_error_state1, sig_error_state2;
+
+            sig_error_state1 = error_states_ + P_sqrt.col(j);
+            sig_error_state2 = error_states_ - P_sqrt.col(j);
+
+            sigma_pts.push_back(sig_error_state1);
+            sigma_pts.push_back(sig_error_state2);
+          }
+
+          // now calculate the expected value of the measurement noise matrix with respect to the posterior distribution
+          MatrixXd R_post(4,4);
+          R_post << 0,0,0,0;
+          0,0,0,0;
+          0,0,0,0;
+          0,0,0,0;
+          for(int i = 0; i < sigma_pts.size(); i++){
+            res = Z_-H_*sigma_pts[i];
+            R_post = R_post + weights[i]*res.transpose()*res;
+          }
+
+          lambda = (neu + d )/(neu + (R_post*R_.inverse()).trace());
+
+        }
+
+}
+
+void CoreNav::orkf3Update(Eigen::RowVectorXd res){
+
+        ROS_INFO_ONCE(" Running covariance-scaling filter ");
+        MatrixXd R_post(4,4);
+        R_post = R_;
+        double delta = 1.5;
+
+        for (int i=0; i < 4; i++){
+            if (std::abs(res(i)/std::pow(R_(i,i),0.5)) <= delta){
+                R_post(i,i) = R_(i,i);
+            }
+            else {
+              R_post(i,i) = R_(i,i)*(delta/std::abs(res(i)/std::pow(R_(i,i),0.5)));
+            }
+        }
+
+        K_ << P_*H_.transpose()*(H_*P_*H_.transpose()+R_post).inverse();
+        error_states_ = error_states_+K_*res.transpose();
+        P_= (Eigen::MatrixXd::Identity(15,15) - K_*H_) * P_ * ( Eigen::MatrixXd::Identity(15,15) - K_ * H_ ).transpose() + K_ * R_post * K_.transpose();
+
+}
+
+
+void CoreNav::orkf4Update(Eigen::RowVectorXd res){
+
+        double mahalcost(0.0);
+        mahalcost = res*(H_*P_*H_.transpose()+R_).inverse()*res.transpose();
+        double critical_valchi4 = 9.488;
+
+        double K_k;
+        double scale = mahalcost/critical_valchi4;
+
+        if (K_k < 1.0){
+            K_k = 1.0;
+        }
+        else{
+          K_k = scale;
+        }
+
+        K_ << P_*H_.transpose()*((K_k -1)*H_*P_*H_.transpose()+ K_k*R_).inverse();
+        error_states_ = error_states_+K_*res.transpose();
+        P_= (Eigen::MatrixXd::Identity(15,15) - K_*H_) * P_ * ( Eigen::MatrixXd::Identity(15,15) - K_ * H_ ).transpose() + K_ * R_ * K_.transpose();
+
 }
 
 void CoreNav::GPCallBack(const core_nav::GP_Output::ConstPtr& gp_data_in_){

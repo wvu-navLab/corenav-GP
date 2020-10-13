@@ -1,10 +1,15 @@
 <p align="center">
-<img alt="Architecture" src="docs/corenav7.gif" width="300">
+<img alt="logo" src="docs/corenav7.gif" width="300">
 </p>
 
 
 ## Overview
-Slip-aware Navigation Stop Planning for Autonomous Planetary Rover Applications
+(TBD) Slip-aware Navigation Stop Planning for Autonomous Planetary Rover Applications
+...
+
+## Architecture
+
+<img alt="architecture" src="docs/algorithm.png" width="700">
 
 **Keywords:** Mars Sample Return, planetary rovers, time series prediction, slip, zero velocity update, rover localization
 

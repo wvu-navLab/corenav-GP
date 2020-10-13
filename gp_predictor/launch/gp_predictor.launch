@@ -1,0 +1,12 @@
+<launch>
+
+    <node pkg="gp_predictor" name="gp_predictor" type="gp_predictor" output="screen">
+
+    <rosparam file="$(find core_nav)/config/init_params.yaml"/>
+
+    <env name="ROSCONSOLE_CONFIG_FILE" value="$(find core_nav)/config/custom_rosconsole.conf"/>
+    </node>
+
+  <!-- </group> -->
+
+</launch>

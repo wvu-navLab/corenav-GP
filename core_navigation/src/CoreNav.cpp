@@ -328,31 +328,6 @@ if (slip !=0.0 && slip !=-1.0 && slip !=1.0 && fabs(cmd[0])>0.2) //&& cmd_vel ==
       //line 1100 R_IP_1 should be defined in gp_predictor
       //K_pred should be defined in gp_predictor
 
-      // Pvec.clear();
-      // Qvec.clear();
-      // STMvec.clear();
-      // for (int row=0; row<15; row++){
-      //   for (int col=0; col<15; col++){
-      //     Pvec.push_back(P_pred(row,col));
-      //     Qvec.push_back(Q_(row,col));
-      //     STMvec.push_back(STM_(row,col));
-      //   }
-      // }
-        // for (int row=0; row<15; row++){
-        //   for (int col=0; col<15; col++){
-        //     Pvec[row*15+col]=P_pred(row,col);
-        //     Qvec[row*15+col]=Q_(row,col);
-        //     STMvec[row*15+col]=STM_(row,col);
-        //   }
-        // }
-
-      // float Pvecfloat[225];
-      // float Qvecfloat[225];
-      // float STMvecfloat[225];
-      // std::copy(Pvec,Pvec+225, Pvecfloat);
-      // Qvecfloat= std::copy(Qvec, Qvec+225 Qvecfloat);
-      // STMvecfloat = std::copy(STMvec, Qvec+225STMvecfloat);
-
         // for(int slip_i=0; slip_i<5*gp_data_.mean.size(); slip_i++) // HERE
         // {
         //     P_pred = STM_*P_pred*STM_.transpose() + Q_;

@@ -1,0 +1,22 @@
+pathfinder:
+    joint_state_controller:
+        type: joint_state_controller/JointStateController
+        publish_rate: 50
+
+    front_left_velocity_controller:
+        type: velocity_controllers/JointVelocityController
+        joint: base_to_front_left
+        pid: {p: 1, i: 0, d: 0}
+    back_left_velocity_controller:
+        type: velocity_controllers/JointVelocityController
+        joint: base_to_back_left
+        pid: {p: 1, i: 0, d: 0}
+    front_right_velocity_controller:
+        type: velocity_controllers/JointVelocityController
+        joint: base_to_front_right
+        pid: {p: 1, i: 0, d: 0}
+    back_right_velocity_controller:
+        type: velocity_controllers/JointVelocityController
+        joint: base_to_back_right
+        pid: {p: 1, i: 0, d: 0}
+

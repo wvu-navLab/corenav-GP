@@ -1,3 +1,36 @@
+/*
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are
+ * met:
+ *
+ *    1. Redistributions of source code must retain the above copyright
+ *       notice, this list of conditions and the following disclaimer.
+ *
+ *    2. Redistributions in binary form must reproduce the above
+ *       copyright notice, this list of conditions and the following
+ *       disclaimer in the documentation and/or other materials provided
+ *       with the distribution.
+ *
+ *    3. Neither the name of the copyright holder nor the names of its
+ *       contributors may be used to endorse or promote products derived
+ *       from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS AS IS
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
+ *
+ * Please contact the author(s) of this library if you have any questions.
+ * Authors: Cagri, Ryan
+ */
+
 #ifndef core_navigation_H
 #define core_navigation_H
 
@@ -20,20 +53,15 @@
 #include <core_nav/GP_Input.h>
 #include <core_nav/GP_Output.h>
 #include <std_msgs/Float64.h>
-#include <thread>
-#include <ros/callback_queue.h>
-#include "std_msgs/String.h"
-#include <core_nav/SetStopping.h>
-
 class CoreNav {
 public:
-        ros::ServiceServer setStoppingService_;
+
         typedef sensor_msgs::Imu ImuData;
         typedef nav_msgs::Odometry OdoData;
         typedef sensor_msgs::JointState JointData;
         typedef geometry_msgs::Twist CmdData;
-        // typedef hw_interface_plugin_roboteq::RoboteqData EncoderLeftData;
-        // typedef hw_interface_plugin_roboteq::RoboteqData EncoderRightData;
+        typedef hw_interface_plugin_roboteq::RoboteqData EncoderLeftData;
+        typedef hw_interface_plugin_roboteq::RoboteqData EncoderRightData;
         typedef geometry_msgs::PoseStamped PoseData;
         typedef Eigen::VectorXd Vector;
         typedef Eigen::MatrixXd Matrix;
@@ -56,12 +84,8 @@ public:
         CoreNav::Vector3 cmd;
         CoreNav::Vector2 encoderLeft;
         CoreNav::Vector2 encoderRight;
-
         CoreNav();
         ~CoreNav();
-
-
-        bool setStopping_(core_nav::SetStopping::Request &req, core_nav::SetStopping::Response &res);
 
 // Calls LoadParameters and RegisterCallbacks. Fails on failure of either.
         bool Initialize(const ros::NodeHandle& n);
@@ -80,8 +104,8 @@ public:
         void OdoCallback(const OdoData& odo_data_);
         void JointCallBack(const JointData& joint_data_);
         void CmdCallBack(const CmdData& cmd_data_);
-        // void EncoderLeftCallBack(const EncoderLeftData& encoderLeft_data_);
-        // void EncoderRightCallBack(const EncoderRightData& encoderRight_data_);
+        void EncoderLeftCallBack(const EncoderLeftData& encoderLeft_data_);
+        void EncoderRightCallBack(const EncoderRightData& encoderRight_data_);
 
         void GPCallBack(const core_nav::GP_Output::ConstPtr& gp_data_in_);
 
@@ -93,10 +117,9 @@ public:
         // void NonHolonomic(const CoreNav::Vector6& imu,const CoreNav::Vector3 vel, const CoreNav::Vector3 att, const CoreNav::Vector3 llh, CoreNav::Vector15 errorStates, Eigen::MatrixXd P, CoreNav::Vector3 omega_b_ib);
         void NonHolonomic(const CoreNav::Vector3 vel, const CoreNav::Vector3 att, const CoreNav::Vector3 llh, CoreNav::Vector15 errorStates, Eigen::MatrixXd P, CoreNav::Vector3 omega_b_ib);
 //Zero vel update
-        // void zupt(const CoreNav::Vector3 vel, const CoreNav::Vector3 att, const CoreNav::Vector3 llh, CoreNav::Vector15 errorStates, Eigen::MatrixXd P);
+        void zupt(const CoreNav::Vector3 vel, const CoreNav::Vector3 att, const CoreNav::Vector3 llh, CoreNav::Vector15 errorStates, Eigen::MatrixXd P);
 // Zero ang. update
-        // void zaru(const CoreNav::Vector3 vel, const CoreNav::Vector3 att, const CoreNav::Vector3 llh, CoreNav::Vector15 errorStates, Eigen::MatrixXd P, const CoreNav::Vector3 omega_b_ib);
-        void zeroUpdate(const CoreNav::Vector3 vel, const CoreNav::Vector3 att, const CoreNav::Vector3 llh, CoreNav::Vector15 errorStates, Eigen::MatrixXd P, const CoreNav::Vector3 omega_b_ib);
+        void zaru(const CoreNav::Vector3 vel, const CoreNav::Vector3 att, const CoreNav::Vector3 llh, CoreNav::Vector15 errorStates, Eigen::MatrixXd P, const CoreNav::Vector3 omega_b_ib);
 
         CoreNav::Vector3 calc_gravity(const double latitude, const double height);
         CoreNav::Matrix3 skew_symm(const CoreNav::Vector3 vec);
@@ -111,8 +134,8 @@ public:
         CoreNav::Vector6 getImuData(const ImuData& imu_data_);
         CoreNav::Vector4 getJointData(const JointData &joint_data_);
         CoreNav::Vector getCmdData(const CmdData &cmd_data_);
-        // CoreNav::Vector2 getEncoderLeftData(const EncoderLeftData &encoderLeft_data_);
-        // CoreNav::Vector2 getEncoderRightData(const EncoderRightData &encoderRight_data_);
+        CoreNav::Vector2 getEncoderLeftData(const EncoderLeftData &encoderLeft_data_);
+        CoreNav::Vector2 getEncoderRightData(const EncoderRightData &encoderRight_data_);
         CoreNav::Vector13 getOdoData(const OdoData& odo_data_);
 
 // The node's name.
@@ -137,8 +160,8 @@ public:
         ImuData imu_data_;
         JointData joint_data_;
         CmdData cmd_data_;
-        // EncoderLeftData encoderLeft_data_;
-        // EncoderRightData encoderRight_data_;
+        EncoderLeftData encoderLeft_data_;
+        EncoderRightData encoderRight_data_;
         std_msgs::Float64 stop_cmd_msg_;
         core_nav::GP_Input slip_msg;
         core_nav::GP_Output gp_data_;
@@ -151,12 +174,12 @@ public:
         bool first_odo_ = true;
         bool first_joint_ = true;
         bool first_imu_ = true;
-        bool first_driving_flag = true;
+        bool flag = true;
         bool propagate_flag = false;
         bool update_flag = false;
         bool gp_flag = false;
         bool started_driving_again_flag = true;
-        bool flag_stopping = true;
+
 // Most recent time stamp for publishers.
         ros::Time stamp_;
 
@@ -261,11 +284,6 @@ public:
         double odomUptCount, startRecording, stopRecording, saveCountOdom;
         double delta_time_odometry_;
         double gravity;
-        // double Pvec[225];
-        // double Qvec[225];
-        // double STMvec[225];
-        // double Hvec[60];
-        geometry_msgs::Point PosVec;
 
 };
 #endif

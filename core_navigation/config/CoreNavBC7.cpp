@@ -327,7 +327,6 @@ if (slip !=0.0 && slip !=-1.0 && slip !=1.0 && fabs(cmd[0])>0.2) //&& cmd_vel ==
       // gp_predictor_service(STM_,P_pred,Q_,H_,savePos);
       //line 1100 R_IP_1 should be defined in gp_predictor
       //K_pred should be defined in gp_predictor
-
       // Pvec.clear();
       // Qvec.clear();
       // STMvec.clear();
@@ -806,22 +805,11 @@ bool CoreNav::setStopping_(core_nav::SetStopping::Request &req, core_nav::SetSto
   // {
   //   res.PvecData[i] =  Pvec[i];
   // }
-  PosVec.x=savePos[0];
-  PosVec.y=savePos[1];
-  PosVec.z=savePos[2];
-
-  res.PosData=PosVec;
   for (int row=0; row<15; row++){
     for (int col=0; col<15; col++){
       res.PvecData[row*15+col]=P_pred(row,col);
       res.QvecData[row*15+col]=Q_(row,col);
       res.STMvecData[row*15+col]=STM_(row,col);
-    }
-  }
-
-  for (int row1=0; row1<4; row1++){
-    for (int col1=0; col1<15; col1++){
-      res.HvecData[row1*4+col1]=H_(row1,col1);
     }
   }
   // res.PvecData.data() <<  Pvec;

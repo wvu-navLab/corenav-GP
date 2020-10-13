@@ -18,13 +18,37 @@ CoreNav::~CoreNav(){
 // ES-EKF STEPS
 void CoreNav::Propagate(){
 
-dt_imu_ = imu_stamp_curr_ - imu_stamp_prev_;
-count++;
+        // ROS_WARN("Inside of the Propagate function\n");
+        dt_imu_ = imu_stamp_curr_ - imu_stamp_prev_; //OK
+        // count++;
+        // ROS_INFO_STREAM("countPropagateProp: " << count);
+        // ROS_INFO_STREAM("countStateModelProp: "<< countStateModel);
+        // ROS_INFO_STREAM("countNonHolo" << countNonHolo);
+        // ROS_INFO_STREAM("odomUptCountProp: " << odomUptCount);
+        // ROS_INFO_STREAM("countZeroProp: "<<countZero);
+        // ROS_INFO_STREAM("countQcalc: "<< countQcalc);
+        // ROS_INFO_STREAM("rearVel_" << rearVel_);
+        // ROS_INFO_STREAM("headRate_" << headRate_);
+        // ROS_INFO_STREAM("IMUax:" << imu[0]);
+        // ROS_INFO_STREAM("IMUay:" << imu[1]);
+        // ROS_INFO_STREAM("IMUaz:" << imu[2]);
+        // ROS_INFO_STREAM("IMUgx:" << imu[3]);
+        // ROS_INFO_STREAM("IMUgy:" << imu[4]);
+        // ROS_INFO_STREAM("IMUgz:" << imu[5]);
+        // ROS_INFO_STREAM_THROTTLE(5,"odomUptCount= "<< odomUptCount/10);
+        // ROS_INFO_THROTTLE(5,"delta_time_odometry_ : %.2f", delta_time_odometry_);
+        // ROS_INFO_THROTTLE(5,"startRecording= %.2f", startRecording/10);
+        // ROS_INFO_THROTTLE(5,"stopRecording= %.2f", stopRecording/10);
+        // ROS_INFO_THROTTLE(5,"gp_flag: %i",gp_flag);
+        // ROS_INFO_THROTTLE(5,"cmd: %.2f",cmd[0]);
 ROS_INFO_THROTTLE(5, "~~~~~~~~~~~~~~~~~");
 ROS_INFO_THROTTLE(5, "odomUptCount= %.2f", odomUptCount / 10);
 ROS_INFO_THROTTLE(5, "dTimu_ : %.4f", dt_imu_);
 ROS_INFO_THROTTLE(5, "delta_time_odometry_ : %.2f", delta_time_odometry_);
+// ROS_INFO_THROTTLE(5, "startRecording= %.2f", startRecording / 10);
+// ROS_INFO_THROTTLE(5, "stopRecording= %.2f", stopRecording / 10);
 ROS_INFO_THROTTLE(5, "gp_flag: %i", gp_flag);
+// ROS_INFO_THROTTLE(5, "cmd: %.2f", cmd[0]);
 if (cmd[0] == 1) {
   ROS_DEBUG_THROTTLE(5, "Rover is moving: %.2f", cmd[0]);
 } else {
@@ -35,11 +59,21 @@ if (startRecording / 10 >= (odomUptCount / 10) - 1)
 } else {
 ROS_WARN_THROTTLE(5,"Recording GP Input between %.2f sec and %.2f sec",startRecording/10.0,stopRecording/10.0);
 }
+// ROS_INFO("imu_stamp_curr_: %.12f",imu_stamp_curr_);
+// ROS_INFO("odo_stamp_curr_: %.12f",odo_stamp_curr_);
+// ROS_INFO("dIMU/ODO: %.12f",imu_stamp_curr_/odo_stamp_curr_);
+// ROS_INFO("odomCount %.2f",odomUptCount);
+// ROS_INFO("IMUCount %.2f",count);
+
 
         omega_b_ib_ << imu[3] - bg_(0), imu[4] - bg_(1), imu[5] - bg_(2);
         f_ib_b_ << imu[0] - ba_(0), imu[1] - ba_(1), imu[2] - ba_(2);
         psiEst_minus=ins_attMinus_[2];
+        // std::cout << "ba: " << ba_<<'\n';
+        // std::cout << "bg: " << bg_<<'\n';
         //Attitude Update
+
+
         CoreNav::Matrix3 CnbMinus = CoreNav::eul_to_dcm(ins_attMinus_[0],ins_attMinus_[1],ins_attMinus_[2]);
         CbnMinus=CnbMinus.transpose();
         omega_n_ie_ << INS::omega_ie*cos(ins_posMinus_[0]), 0.0, (-1.0)*INS::omega_ie*sin(ins_posMinus_[0]);
@@ -61,6 +95,22 @@ ROS_WARN_THROTTLE(5,"Recording GP Input between %.2f sec and %.2f sec",startReco
         CoreNav::Matrix3 CbnPlus;
         CbnPlus=CbnMinus*(eye3+Omega_b_ib_*dt_imu_)-(Omega_n_ie_+ Omega_n_en_)*CbnMinus*dt_imu_;
         ins_att_= CoreNav::dcm_to_eul( CbnPlus );
+
+        // incCounter_ = incCounter_ + 1;
+        // if (incCounter_ > 1)
+        // {
+        //   // if there has been a roll over
+        //   double yawAvg = (yawInc_ / (incCounter_ - 1));
+        //   if (fabs(ins_att_[2]- yawAvg) > INS::PI) {
+        //     std::cout << "Roll Over Detected " << ins_att_[2] << " " << yawAvg << std::endl;
+        //     if (ins_att_[2] < yawAvg)
+        //     ins_att_[2] = ins_att_[2] + 2*(INS::PI);
+        //     else
+        //     ins_att_[2] = ins_att_[2] - 2*(INS::PI);
+        //   }
+        // }
+        //
+        // yawInc_ = yawInc_ + ins_att_[2];
 
         CoreNav::Vector3 V_n_ib;
         //specific-force transformation
@@ -107,8 +157,8 @@ ROS_WARN_THROTTLE(5,"Recording GP Input between %.2f sec and %.2f sec",startReco
 
           // Measurement Innovation -- integration part for INS -- eq 16.42
           // CoreNav::Vector3 lb2f(-T_r_/2, 0.0, -INS::wheel_radius*2);
-          // CoreNav::Vector3 lb2f(-0.272, 0.0, 0.0);
-          CoreNav::Vector3 lb2f(-T_r_/2, 0.0, -INS::wheel_radius*2);
+          CoreNav::Vector3 lb2f(-0.272, 0.0, 0.0);
+
           double tmp1 = eye3.row(0)*(Cn2bPlus*ins_vel_ + (CoreNav::skew_symm(omega_b_eb)*lb2f));
           double tmp2 = eye3.row(1)*(Cn2bPlus*ins_vel_ + (CoreNav::skew_symm(omega_b_eb)*lb2f));
           double tmp3 = eye3.row(2)*(Cn2bPlus*ins_vel_ + (CoreNav::skew_symm(omega_b_eb)*lb2f));
@@ -123,7 +173,7 @@ ROS_WARN_THROTTLE(5,"Recording GP Input between %.2f sec and %.2f sec",startReco
         CoreNav::NonHolonomic(ins_vel_, ins_att_, ins_pos_, error_states_, P_, omega_b_ib_);
 
         // Zero-Updates
-        if ( std::abs(rearVel_) < 0.005) //
+        if ( std::abs(rearVel_) <= 0.005) //
         {
                 // CoreNav::zupt(ins_vel_, ins_att_, ins_pos_, error_states_, P_);
                 CoreNav::zeroUpdate(ins_vel_, ins_att_, ins_pos_, error_states_, P_, omega_b_ib_);
@@ -134,21 +184,20 @@ ROS_WARN_THROTTLE(5,"Recording GP Input between %.2f sec and %.2f sec",startReco
         ins_posMinus_=ins_pos_;
 
 
-        ba_(0)=ba_(0)+error_states_(9);
-        ba_(1)=ba_(1)+error_states_(10);
-        ba_(2)=ba_(2)+error_states_(11);
-        bg_(0)=bg_(0)+error_states_(12);
-        bg_(1)=bg_(1)+error_states_(13);
-        bg_(2)=bg_(2)+error_states_(14);
+        // ba_(0)=ba_(0)+error_states_(9);
+        // ba_(1)=ba_(1)+error_states_(10);
+        // ba_(2)=ba_(2)+error_states_(11);
+        // bg_(0)=bg_(0)+error_states_(12);
+        // bg_(1)=bg_(1)+error_states_(13);
+        // bg_(2)=bg_(2)+error_states_(14);
+        // error_states_.segment(9,6)<<Eigen::VectorXd::Zero(6);
 
-        error_states_.segment(9,6)<<Eigen::VectorXd::Zero(6);
-
-        // ba_(0)=error_states_(9);
-        // ba_(1)=error_states_(10);
-        // ba_(2)=error_states_(11);
-        // bg_(0)=error_states_(12);
-        // bg_(1)=error_states_(13);
-        // bg_(2)=error_states_(14);
+        ba_(0)=error_states_(9);
+        ba_(1)=error_states_(10);
+        ba_(2)=error_states_(11);
+        bg_(0)=error_states_(12);
+        bg_(1)=error_states_(13);
+        bg_(2)=error_states_(14);
 
         ins_enu_ << CoreNav::llh_to_enu(ins_pos_[0],ins_pos_[1],ins_pos_[2]);
         ins_cn_<<ins_att_,ins_vel_,ins_enu_;
@@ -169,19 +218,25 @@ ROS_WARN_THROTTLE(5,"Recording GP Input between %.2f sec and %.2f sec",startReco
         return;
 }
 void CoreNav::Update(){
-
-        odomUptCount=odomUptCount+1;
-
+        // yawInc_=0.0;
+        // odomUptCount++;
+        // ROS_INFO_STREAM("odomUptCount: " << odomUptCount);
         velFrontLeft_ = -joint[0]*INS::wheel_radius;
         velFrontRight_=  joint[1]*INS::wheel_radius;
         velBackLeft_  = -joint[2]*INS::wheel_radius;
         velBackRight_ =  joint[3]*INS::wheel_radius;
 
         rearVel_=(velBackLeft_+velBackRight_)/2.0;
+        // ROS_INFO_STREAM("rearVel_" << rearVel_);
 
         double frontVel =(velFrontLeft_+velFrontRight_)/2.0;
         headRate_=(velBackLeft_-velBackRight_)/T_r_;
-        // dt_odo_ = odo_stamp_curr_ - odo_stamp_prev_;
+        // headRate_=-odo[12];
+
+        // ROS_INFO_STREAM("headRate_" << headRate_);
+        // ROS_INFO_STREAM("headRate2_" << headRate2_);
+        //MAYBE HEADING CAN BE CALCULATED ALL LEFTS (FRONT,BACK) MINUS ALL RIGHTS?
+
         dt_odo_ = joint_stamp_curr_ - joint_stamp_prev_;
         delta_time_odometry_=delta_time_odometry_+dt_odo_;
         // ROS_INFO_THROTTLE(5,"delta_time_odometry_ : %.2f", delta_time_odometry_);
@@ -189,7 +244,9 @@ void CoreNav::Update(){
         CoreNav::Matrix3 Cn2bUnc=CoreNav::eul_to_dcm(ins_att_(0),ins_att_(1),ins_att_(2));
         H11_ =-H11_/dt_odo_;
         H12_ =-H12_/dt_odo_;
+        // H21_ = H21_*(ins_att_(2)-psiEst_minus)/(dt_odo_*dt_odo_);
         H21_ = H21_*(ins_att_(2)-psiEst_minus)/(dt_odo_*dt_odo_);
+
         H31_ =-H31_/dt_odo_;
         H32_ =-H32_/dt_odo_;
         H24_ =-(cos(ins_att_(1))*eye3.row(2)*Cn2bUnc.transpose())/dt_odo_;
@@ -198,8 +255,13 @@ void CoreNav::Update(){
 
         double z1_odom=rearVel_*(1-s_or_);
         double z2_odom=headRate_*(1-s_or_)-((z11_/dt_odo_)/T_r_)*s_delta_or_;
+        // double z2_odom=headRate_*(1-0.0)-((z11_/dt_odo_)/T_r_)*0.0;
+
         double z1_ins=z11_;
         double z2_ins=(ins_att_(2)-psiEst)*z21_;// psiEst in here should be the heading between the updates (i.e., psiEst(1), psiEst(26), psiEst(51)
+// ROS_INFO_STREAM("psi_est: "<<psiEst);
+// ROS_INFO_STREAM("ins_att(2): "<<ins_att_(2));
+// ROS_INFO_STREAM("diff: "<<ins_att_(2)-psiEst);
 
         if (abs(z2_ins) > 0.5) {
                 z2_ins=0.0;
@@ -218,15 +280,9 @@ void CoreNav::Update(){
         H_.row(2)<<H31_.transpose(), H32_.transpose(), zeros3.row(0), zeros3.row(0),zeros3.row(0);
         H_.row(3)<<H41_.transpose(), H42_.transpose(), zeros3.row(0), zeros3.row(0),zeros3.row(0);
 
-        Eigen::RowVectorXd res(4);
-
-        res = Z_-H_*error_states_ ;
-
         K_ << P_*H_.transpose()*(H_*P_*H_.transpose()+R_).inverse();
 
-        error_states_ = error_states_+K_*res.transpose();
-
-        P_= (Eigen::MatrixXd::Identity(15,15) - K_*H_) * P_ * ( Eigen::MatrixXd::Identity(15,15) - K_ * H_ ).transpose() + K_ * R_ * K_.transpose();
+        error_states_ = error_states_+K_*(Z_-H_*error_states_);
 
         ins_att_ = CoreNav::dcm_to_eul((Eigen::MatrixXd::Identity(3,3)- CoreNav::skew_symm(error_states_.segment(0,3)))*Cn2bUnc.transpose());
         ins_vel_ = ins_vel_ - error_states_.segment(3,3);
@@ -239,6 +295,8 @@ void CoreNav::Update(){
         psiEst=ins_att_[2];
 
         error_states_.segment(0,9)<<Eigen::VectorXd::Zero(9);
+
+        P_=(Eigen::MatrixXd::Identity(15,15) - K_*H_) * P_* ( Eigen::MatrixXd::Identity(15,15) - K_ * H_ ).transpose() + K_ * R_ * K_.transpose();
 
         double vlin=eye3.row(0)*(Cn2bUnc*ins_vel_);
         double slip= std::max(std::max(((velFrontRight_)-vlin)/(velFrontRight_),((velBackRight_)-vlin)/(velBackRight_)),std::max(((velFrontLeft_)-vlin)/(velFrontLeft_),((velBackLeft_)-vlin)/(velBackLeft_)));
@@ -263,7 +321,7 @@ void CoreNav::Update(){
 
 if (slip !=0.0 && slip !=-1.0 && slip !=1.0 && fabs(cmd[0])>0.2) //&& cmd_vel == 1
 {
-  if (first_driving_flag) //this flag is true at the beginning and only true for the first driving, then it is always false --> check line 596.
+  if (flag) //this flag is true at the beginning and only true for the first driving, then it is always false --> check line 596.
   // firstDrivingflag
   // flag_driving = (slip !=0.0 && slip !=-1.0 && slip !=1.0 ) && cmd_vel == 1
   {
@@ -275,7 +333,7 @@ if (slip !=0.0 && slip !=-1.0 && slip !=1.0 && fabs(cmd[0])>0.2) //&& cmd_vel ==
     ROS_INFO_ONCE("Recording will be stopped at %.2f sec", stopRecording/10.0);
     // ROS_ERROR("XYerror1 %.12f meters", xy_errSlip);
 
-    first_driving_flag=false; // firstDrivingflag
+    flag=false; // firstDrivingflag
   }
 
 
@@ -309,10 +367,7 @@ if (slip !=0.0 && slip !=-1.0 && slip !=1.0 && fabs(cmd[0])>0.2) //&& cmd_vel ==
             if (slip_msg.slip_array.size()==0) {
               ROS_ERROR("SLIP MESSAGE IS EMPTY");
             }
-            else{
-              gp_pub.publish(slip_msg);
-            }
-
+            gp_pub.publish(slip_msg);
 
             slip_msg.slip_array.clear();
             slip_msg.time_array.clear();
@@ -323,101 +378,68 @@ if (slip !=0.0 && slip !=-1.0 && slip !=1.0 && fabs(cmd[0])>0.2) //&& cmd_vel ==
       ROS_DEBUG("NEW GP DATA ARRIVED!");
 
       double cmd_stop_ = 0.0;
+        for(int slip_i=0; slip_i<25*gp_data_.mean.size(); slip_i++)
+        {
+            P_pred = STM_*P_pred*STM_.transpose() + Q_;
+            if ((slip_i % 25) ==0) //odomdata available
+            {
+            double chi0_slip=gp_data_.mean.at(i);
+            double chi1_slip=gp_data_.mean.at(i)+gp_data_.sigma.at(i);
+            double chi2_slip=gp_data_.mean.at(i)-gp_data_.sigma.at(i);
 
-      // gp_predictor_service(STM_,P_pred,Q_,H_,savePos);
-      //line 1100 R_IP_1 should be defined in gp_predictor
-      //K_pred should be defined in gp_predictor
+            double chi0_odo=0.8/(1.0-chi0_slip);
+            double chi1_odo=0.8/(1.0-chi1_slip);
+            double chi2_odo=0.8/(1.0-chi2_slip);
 
-      // Pvec.clear();
-      // Qvec.clear();
-      // STMvec.clear();
-      // for (int row=0; row<15; row++){
-      //   for (int col=0; col<15; col++){
-      //     Pvec.push_back(P_pred(row,col));
-      //     Qvec.push_back(Q_(row,col));
-      //     STMvec.push_back(STM_(row,col));
-      //   }
-      // }
-        // for (int row=0; row<15; row++){
-        //   for (int col=0; col<15; col++){
-        //     Pvec[row*15+col]=P_pred(row,col);
-        //     Qvec[row*15+col]=Q_(row,col);
-        //     STMvec[row*15+col]=STM_(row,col);
-        //   }
-        // }
+            double chi_UT_est=(chi0_odo+chi1_odo+chi2_odo)/3.0;
+            double chi_UT_est_cov=((chi0_odo-chi_UT_est)*(chi0_odo-chi_UT_est)+(chi1_odo-chi_UT_est)*(chi1_odo-chi_UT_est)+(chi2_odo-chi_UT_est)*(chi2_odo-chi_UT_est))/3.0;
 
-      // float Pvecfloat[225];
-      // float Qvecfloat[225];
-      // float STMvecfloat[225];
-      // std::copy(Pvec,Pvec+225, Pvecfloat);
-      // Qvecfloat= std::copy(Qvec, Qvec+225 Qvecfloat);
-      // STMvecfloat = std::copy(STMvec, Qvec+225STMvecfloat);
+             R_IP_2<< std::max(0.03*0.03,chi_UT_est_cov*chi_UT_est_cov),0,0,0,
+                      0,std::max(0.03*0.03,chi_UT_est_cov*chi_UT_est_cov),0,0,
+                      0,0,std::max(0.05*0.05,chi_UT_est_cov*chi_UT_est_cov),0,
+                      0,0,0,0.05*0.05;
 
-        // for(int slip_i=0; slip_i<5*gp_data_.mean.size(); slip_i++) // HERE
-        // {
-        //     P_pred = STM_*P_pred*STM_.transpose() + Q_;
-        //     if ((slip_i % 5) ==0) //odomdata available //HERE
-        //     {
-        //     double chi0_slip=gp_data_.mean.at(i);
-        //     double chi1_slip=gp_data_.mean.at(i)+gp_data_.sigma.at(i);
-        //     double chi2_slip=gp_data_.mean.at(i)-gp_data_.sigma.at(i);
-        //
-        //     double chi0_odo=0.8/(1.0-chi0_slip);
-        //     double chi1_odo=0.8/(1.0-chi1_slip);
-        //     double chi2_odo=0.8/(1.0-chi2_slip);
-        //
-        //     double chi_UT_est=(chi0_odo+chi1_odo+chi2_odo)/3.0;
-        //     double chi_UT_est_cov=((chi0_odo-chi_UT_est)*(chi0_odo-chi_UT_est)+(chi1_odo-chi_UT_est)*(chi1_odo-chi_UT_est)+(chi2_odo-chi_UT_est)*(chi2_odo-chi_UT_est))/3.0;
-        //
-        //      R_IP_2<< std::max(0.03*0.03,chi_UT_est_cov*chi_UT_est_cov),0,0,0,
-        //               0,std::max(0.03*0.03,chi_UT_est_cov*chi_UT_est_cov),0,0,
-        //               0,0,std::max(0.05*0.05,chi_UT_est_cov*chi_UT_est_cov),0,
-        //               0,0,0,0.05*0.05;
-        //
-        //      R_IP=25*R_IP_1*R_IP_2*R_IP_1.transpose();
-        //      // R_IP=R_IP_1*R_IP_2*R_IP_1.transpose();
-        //
-        //
-        //     K_pred=P_pred*H_.transpose()*(H_*P_pred*H_.transpose() +R_IP).inverse();
-        //     P_pred=(Eigen::MatrixXd::Identity(15,15) - K_pred*H_)*P_pred*(Eigen::MatrixXd::Identity(15,15)-K_pred*H_).transpose()  + K_pred*R_IP*K_pred.transpose();
-        //     // std::cout << "i:" << i << '\n';
-        //     i++;
-        //     }
-        //
-        //     ins_enu_slip << CoreNav::llh_to_enu(savePos[0],savePos[1],savePos[2]);
-        //     ins_enu_slip_3p << CoreNav::llh_to_enu(savePos[0]-3.0*sqrt(std::abs(P_pred(6,6))),savePos[1]-3.0*sqrt(std::abs(P_pred(7,7))), savePos[2]-3.0*sqrt(std::abs(P_pred(8,8))));
-        //     ins_enu_slip3p << CoreNav::llh_to_enu(savePos[0]+3.0*sqrt(std::abs(P_pred(6,6))),savePos[1]+3.0*sqrt(std::abs(P_pred(7,7))), savePos[2]+3.0*sqrt(std::abs(P_pred(8,8))));
-        //
-        //     xy_errSlip = sqrt((ins_enu_slip3p(0)-ins_enu_slip(0))*(ins_enu_slip3p(0)-ins_enu_slip(0)) + (ins_enu_slip3p(1)-ins_enu_slip(1))*(ins_enu_slip3p(1)-ins_enu_slip(1)));
-        //     ROS_ERROR_THROTTLE(0.5,"XYerror %.6f meters", xy_errSlip);
-        //     // std::cout << "error" << '\n'<< xy_errSlip << '\n';
-        //
-        //     if (xy_errSlip > 2.00)
-        //     {
-        //
-        //       ROS_ERROR("Stop Command Required, error is more than %.2f meters", xy_errSlip);
-        //       ROS_ERROR("Stop command should be set at %u seconds after %.2f sec driving",i/10,odomUptCount/10.0);
-        //       if (gp_arrived_time_ + i/10.0 - ros::Time::now().toSec()<0.0) // if the results from GP arrival time and the time for each odometry update sum is less then the current time stop immediately. This means delta time is negative--we needed to stop earlier.
-        //       {
-        //       // if (gp_arrived_time_ + i/10.0 <0.0) {
-        //         stop_cmd_msg_.data = 0.5;
-        //         cmd_stop_=stop_cmd_msg_.data;
-        //       }
-        //       else //otherwise calculate the necessary time for stopping -- when do we need to stop from now.
-        //       {
-        //         stop_cmd_msg_.data = gp_arrived_time_ + i/10.0 - ros::Time::now().toSec();
-        //         // stop_cmd_msg_.data = gp_arrived_time_ + i/10.0 ;
-        //         cmd_stop_=stop_cmd_msg_.data;
-        //
-        //       }
-        //       stop_cmd_pub_.publish(stop_cmd_msg_); //publish the delta time required to stop.
-        //       ROS_DEBUG("Remaining Time to Stop = %.3f s", stop_cmd_msg_.data);
-        //
-        //       break; // then break the for loop.
-        //     }
-        //
-        // }
+             R_IP=R_IP_1*R_IP_2*R_IP_1.transpose();
 
+            K_pred=P_pred*H_.transpose()*(H_*P_pred*H_.transpose() +R_IP).inverse();
+            P_pred=(Eigen::MatrixXd::Identity(15,15) - K_pred*H_)*P_pred*(Eigen::MatrixXd::Identity(15,15)-K_pred*H_).transpose()  + K_pred*R_IP*K_pred.transpose();
+            // std::cout << "i:" << i << '\n';
+            i++;
+            }
+
+            ins_enu_slip << CoreNav::llh_to_enu(savePos[0],savePos[1],savePos[2]);
+            ins_enu_slip_3p << CoreNav::llh_to_enu(savePos[0]-3.0*sqrt(std::abs(P_pred(6,6))),savePos[1]-3.0*sqrt(std::abs(P_pred(7,7))), savePos[2]-3.0*sqrt(std::abs(P_pred(8,8))));
+            ins_enu_slip3p << CoreNav::llh_to_enu(savePos[0]+3.0*sqrt(std::abs(P_pred(6,6))),savePos[1]+3.0*sqrt(std::abs(P_pred(7,7))), savePos[2]+3.0*sqrt(std::abs(P_pred(8,8))));
+
+            xy_errSlip = sqrt((ins_enu_slip3p(0)-ins_enu_slip(0))*(ins_enu_slip3p(0)-ins_enu_slip(0)) + (ins_enu_slip3p(1)-ins_enu_slip(1))*(ins_enu_slip3p(1)-ins_enu_slip(1)));
+            ROS_ERROR_THROTTLE(0.5,"XYerror %.6f meters", xy_errSlip);
+            // std::cout << "error" << '\n'<< xy_errSlip << '\n';
+
+            if (xy_errSlip > 2.00)
+            {
+
+              ROS_ERROR("Stop Command Required, error is more than %.2f meters", xy_errSlip);
+              ROS_ERROR("Stop command should be set at %u seconds after %.2f sec driving",i/10,odomUptCount/10.0);
+              if (gp_arrived_time_ + i/10.0 - ros::Time::now().toSec()<0.0) // if the results from GP arrival time and the time for each odometry update sum is less then the current time stop immediately. This means delta time is negative--we needed to stop earlier.
+              {
+              // if (gp_arrived_time_ + i/10.0 <0.0) {
+                stop_cmd_msg_.data = 0.5;
+                cmd_stop_=stop_cmd_msg_.data;
+              }
+              else //otherwise calculate the necessary time for stopping -- when do we need to stop from now.
+              {
+                stop_cmd_msg_.data = gp_arrived_time_ + i/10.0 - ros::Time::now().toSec();
+                // stop_cmd_msg_.data = gp_arrived_time_ + i/10.0 ;
+                cmd_stop_=stop_cmd_msg_.data;
+
+              }
+              stop_cmd_pub_.publish(stop_cmd_msg_); //publish the delta time required to stop.
+              ROS_DEBUG("Remaining Time to Stop = %.3f s", stop_cmd_msg_.data);
+
+              break; // then break the for loop.
+            }
+
+        }
         new_gp_data_arrived_ = false; // Set the flag back to false, so that this does not happen again until new data comes in on the subscriber callback and sets this flag back to true
         i=0.0;
         slip_i=0.0;
@@ -455,7 +477,7 @@ void CoreNav::NonHolonomic(const CoreNav::Vector3 vel, const CoreNav::Vector3 at
         // ROS_INFO_STREAM("countNonHolo" << countNonHolo);
         CoreNav::Matrix3 Cnb = CoreNav::eul_to_dcm(att[0],att[1],att[2]);
         // ROS_INFO_STREAM("Cnb:\n" << Cnb);
-        CoreNav::Vector3 lf2b(0.0, 0.0, 0.272);
+        CoreNav::Vector3 lf2b(-0.272, 0.0, 0.272);
         // CoreNav::Vector3 lf2b(0.35, 0.0, 0.272);
 
         z_holo.row(0) = -eye3.row(1)*(Cnb*vel-CoreNav::skew_symm(omega_b_ib)*lf2b); //z31
@@ -465,7 +487,7 @@ void CoreNav::NonHolonomic(const CoreNav::Vector3 vel, const CoreNav::Vector3 at
         H_holo.row(0) << zeros3.row(0), -eye3.row(1)*Cnb, zeros3.row(0), zeros3.row(0), zeros3.row(0); //h32
         H_holo.row(1) << zeros3.row(0), -eye3.row(2)*Cnb, zeros3.row(0), zeros3.row(0), zeros3.row(0); //h42
 
-        if (abs(omega_b_ib[2]>0.1)) {
+        if (abs(omega_b_ib[2]>=0.1)) {
           R_holoS << 0.05;
           z_holoS << -eye3.row(2)*(Cnb*vel-CoreNav::skew_symm(omega_b_ib)*lf2b);
           H_holoS << zeros3.row(0), -eye3.row(2)*Cnb, zeros3.row(0), zeros3.row(0), zeros3.row(0);
@@ -668,6 +690,8 @@ CoreNav::Vector3 CoreNav::calc_gravity(const double latitude, const double heigh
                 gravity=g0/pow((1.0+height/RO),2.0);
         }
         CoreNav::Vector3 grav(0.0,0.0,gravity);
+        // ROS_INFO("gravity= %.3f",gravity);
+        // CoreNav::Vector3 grav(0.0,0.0,9.81);
         return grav;
 }
 CoreNav::Matrix3 CoreNav::skew_symm(const CoreNav::Vector3 vec){
@@ -794,56 +818,19 @@ bool CoreNav::RegisterCallbacks(const ros::NodeHandle& n){
         // encoderRight_sub_ = nl.subscribe(encoderRight_topic_,  1, &CoreNav::EncoderRightCallBack, this);
         gp_sub_ =nl.subscribe(gp_topic_,1, &CoreNav::GPCallBack, this);
 
-        setStoppingService_ = nl.advertiseService("stopping_service",&CoreNav::setStopping_, this);
-
         return true;
 }
-
-bool CoreNav::setStopping_(core_nav::SetStopping::Request &req, core_nav::SetStopping::Response &res){
-  ROS_DEBUG(" GOT SOME MESSAGE: %d", req.stopping);
-  flag_stopping = req.stopping;
-  // for (int i=0; i<225; i++)
-  // {
-  //   res.PvecData[i] =  Pvec[i];
-  // }
-  PosVec.x=savePos[0];
-  PosVec.y=savePos[1];
-  PosVec.z=savePos[2];
-
-  res.PosData=PosVec;
-  for (int row=0; row<15; row++){
-    for (int col=0; col<15; col++){
-      res.PvecData[row*15+col]=P_pred(row,col);
-      res.QvecData[row*15+col]=Q_(row,col);
-      res.STMvecData[row*15+col]=STM_(row,col);
-    }
-  }
-
-  for (int row1=0; row1<4; row1++){
-    for (int col1=0; col1<15; col1++){
-      res.HvecData[row1*4+col1]=H_(row1,col1);
-    }
-  }
-  // res.PvecData.data() <<  Pvec;
-  // res.QvecData.data() <<  Qvec;
-  // res.STMvecData.data() <<  STMvec;
-
-  // float Pvecfloat[225];
-  // float Qvecfloat[225];
-  // float STMvecfloat[225];
-  // std::copy(Pvec,Pvec+225, Pvecfloat);
-  // std::copy(Qvec, Qvecfloat);
-  // std::copy(STMvec, STMvecfloat);
-
-  // res.Qvec = Qvecfloat;
-  // res.STMvec = STMvecfloat;
-
-  return true;
-}
-
 void CoreNav::OdoCallback(const OdoData& odo_data_){
 
         odo = getOdoData(odo_data_);
+        // odomUptCount++;
+        // ROS_INFO_STREAM("countPropagateODO: " << count);
+        // ROS_INFO_STREAM("countStateModelODO: "<< countStateModel);
+        // ROS_INFO_STREAM("countNonHoloODO" << countNonHolo);
+        // ROS_INFO_STREAM("odomUptCountODO: " << odomUptCount);
+        // ROS_INFO_STREAM("countZeroODO: "<<countZero);
+        // ROS_INFO("Odometry called\n");
+        // ROS_INFO_STREAM("ODO: " << count/odomUptCount);
         has_odo_ = true; // ODOMETRY ON/OFF
         if (first_odo_ )
         {
@@ -855,7 +842,9 @@ void CoreNav::OdoCallback(const OdoData& odo_data_){
 
                 odo_stamp_prev_ = odo_stamp_curr_;
                 odo_stamp_curr_ = (odo_data_.header.stamp).toSec();
+                // ROS_INFO("Update Flag is set to true\n");
                 // update_flag = true;
+                // Update(odo,joint);
                 // Update();
         }
 
@@ -864,7 +853,7 @@ void CoreNav::OdoCallback(const OdoData& odo_data_){
 }
 void CoreNav::JointCallBack(const JointData& joint_data_){
         joint = getJointData(joint_data_);
-
+        odomUptCount++;
         // ROS_INFO("Joints are called\n");
         has_joint_ = true;
         if (first_joint_)
@@ -888,7 +877,13 @@ void CoreNav::JointCallBack(const JointData& joint_data_){
 }
 void CoreNav::ImuCallback(const ImuData& imu_dataAdis_){
         imu = getImuData(imu_dataAdis_);
-        // count++;
+        count++;
+        // ROS_INFO_STREAM("countPropagateIMU: " << count);
+        // ROS_INFO_STREAM("countStateModelIMU: "<< countStateModel);
+        // ROS_INFO_STREAM("countNonHoloIMU" << countNonHolo);
+        // ROS_INFO_STREAM("odomUptCountIMU: " << odomUptCount);
+        // ROS_INFO_STREAM("countZeroIMU: "<<countZero);
+        // ROS_INFO_STREAM("imuODO: " << count/odomUptCount);
         has_imu_ = true;
         if (first_imu_)
         {
@@ -902,7 +897,6 @@ void CoreNav::ImuCallback(const ImuData& imu_dataAdis_){
                 // propagate_flag = true;
                 // Propagate(imu,odo,cmd,encoderLeft,encoderRight,joint);
                 Propagate();
-                // propagate_flag = true;
 
         }
         // ROS_INFO("imu_stamp_curr_: %.12f",imu_stamp_curr_);
@@ -914,6 +908,16 @@ void CoreNav::CmdCallBack(const CmdData& cmd_data_){
         has_cmd_ = true;
         return;
 }
+// void CoreNav::EncoderLeftCallBack(const EncoderLeftData& encoderLeft_data_){
+//         encoderLeft = getEncoderLeftData(encoderLeft_data_);
+//         has_encoderLeft_ = true;
+//         return;
+// }
+// void CoreNav::EncoderRightCallBack(const EncoderRightData& encoderRight_data_){
+//         encoderRight = getEncoderRightData(encoderRight_data_);
+//         has_encoderRight_ = true;
+//         return;
+// }
 void CoreNav::GPCallBack(const core_nav::GP_Output::ConstPtr& gp_data_in_){
     this->gp_data_.mean = gp_data_in_->mean;
     this->gp_data_.sigma = gp_data_in_->sigma;
@@ -979,7 +983,16 @@ CoreNav::Vector CoreNav::getCmdData(const CmdData& cmd_data_){
         }
         return cmdVec;
 }
-
+// // CoreNav::Vector2 CoreNav::getEncoderLeftData(const EncoderLeftData& encoderLeft_data_){
+//         CoreNav::Vector2 encoderLeftVec((Vector(2) << encoderLeft_data_.encoder_counter_absolute[0],
+//                                    encoderLeft_data_.encoder_counter_absolute[1]).finished());
+//         return encoderLeftVec;
+// }
+// // CoreNav::Vector2 CoreNav::getEncoderRightData(const EncoderRightData& encoderRight_data_){
+//         CoreNav::Vector2 encoderRightVec((Vector(2) << encoderRight_data_.encoder_counter_absolute[0],
+//                                    encoderRight_data_.encoder_counter_absolute[1]).finished());
+//         return encoderRightVec;
+// }
 // PUBLISHERS
 void CoreNav::PublishStates(const CoreNav::Vector3& states,const ros::Publisher& pub){
         // // Check for subscribers before doing any work.
@@ -1141,15 +1154,28 @@ bool CoreNav::Init(const ros::NodeHandle& n){
         P_pred=Eigen::MatrixXd::Zero(num_states_,num_states_);
 
         Eigen::MatrixXd P= Eigen::MatrixXd::Zero(15,15);
-        P(0,0)=init_cov_roll;       P(1,1)=init_cov_pitch;      P(2,2)=init_cov_yaw;
-        P(3,3)=init_cov_vx;         P(4,4)=init_cov_vy;         P(5,5)=init_cov_vz;
-        P(6,6)=init_cov_x;          P(7,7)=init_cov_y;          P(8,8)=init_cov_z;
-        P(9,9)=init_bias_std_a_x;   P(10,10)=init_bias_std_a_y; P(11,11)=init_bias_std_a_z;
-        P(12,12)=init_bias_std_g_x; P(13,13)=init_bias_std_g_y; P(14,14)=init_bias_std_g_z;
+        P(0,0)=init_cov_roll;//1.21846967914683e-06
+        P(1,1)=init_cov_pitch;//1.21846967914683e-06
+        P(2,2)=init_cov_yaw;//4.87387871658734e-06
+        P(3,3)=init_cov_vx; //4.00000000000000e-07
+        P(4,4)=init_cov_vy; //4.00000000000000e-07
+        P(5,5)=init_cov_vz; //4.00000000000000e-07
+        P(6,6)=init_cov_x;  //0.0
+        P(7,7)=init_cov_y;  //0.0
+        P(8,8)=init_cov_z;  //0.0
+        // biasstd = ba and P(9,9)
+        // biasmean= init_bias
+        P(9,9)=init_bias_std_a_x; //0.0209827591734631
+        P(10,10)=init_bias_std_a_y;  //0.0123288276981154
+        P(11,11)=init_bias_std_a_z;  //0.0170473719586282
+        P(12,12)=init_bias_std_g_x;  //0.000811989748722119
+        P(13,13)=init_bias_std_g_y;  //0.000864633304415640
+        P(14,14)=init_bias_std_g_z;  //0.000863893904641904
 
         ba_(0) = P(9,9);   ba_(1) = P(10,10); ba_(2) = P(11,11);
         bg_(0) = P(12,12); bg_(1) = P(13,13); bg_(2) = P(14,14);
 
+        // P_pred=P;
         // ODOMETRY R VALUES
         P_=P;
         P_pred=P_;
@@ -1159,13 +1185,13 @@ bool CoreNav::Init(const ros::NodeHandle& n){
         0.0, 0.0,1.0,0.0,
         0.0,0.0,0.0,1.0;
 
-        R_2<<0.03*0.03, 0.0,0.0,0.0,
-        0.0, 0.03*0.03, 0.0,0.0,
+        R_2<<0.025*0.025, 0.0,0.0,0.0,
+        0.0, 0.025*0.025, 0.0,0.0,
         0.0,0.0,0.05*0.05,0.0,
         0.0,0.0,0.0,0.05*0.05;
 
-        // R_<<R_1*R_2*R_1.transpose();
-        R_<<25*R_1*R_2*R_1.transpose(); // HERE
+        R_<<25*R_1*R_2*R_1.transpose();
+
 
         //GP R VALUES
         R_IP<<R_;
@@ -1194,13 +1220,11 @@ bool CoreNav::Init(const ros::NodeHandle& n){
                   0,0,std::pow(0.0025,2),0,0,0,
                   0,0,0,std::pow(0.02,2),0,0,
                   0,0,0,0,std::pow(0.02,2),0,
-                  0,0,0,0,0,std::pow(0.02,2);
+                  0,0,0,0,0,std::pow(1.0,2);
 
-        // NON HOLONONOMIC R VALUES // HERE
-        // R_holo << 0.05,0,
-        //           0,0.1;
-        R_holo << 0.05,0,
-                  0,0.1;
+        // NON HOLONONOMIC R VALUES
+        R_holo << 25*0.05,0,
+                  0,25*0.1;
 
         H11_<< 0.0,0.0,0.0;
         H12_ << 0.0,0.0,0.0;
@@ -1236,6 +1260,22 @@ bool CoreNav::Init(const ros::NodeHandle& n){
         stopRecording=0;
         saveCountOdom=0;
         i=0;
-        bool first_driving_flag = true;
+        bool flag = true;
         return true;
 }
+
+// Zero vel. update
+// void CoreNav::zupt(const CoreNav::Vector3 vel, const CoreNav::Vector3 att, const CoreNav::Vector3 llh, CoreNav::Vector15 error_states, Eigen::MatrixXd P){
+//         CoreNav::Matrix3 Cnb = CoreNav::eul_to_dcm(att[0],att[1],att[2]);
+//         CoreNav::Vector3 z_zupt;
+//         z_zupt = -vel;
+//         K_zupt = P * H_zupt.transpose() * (H_zupt * P * H_zupt.transpose() + R_zupt).inverse();
+//         error_states_ = error_states + K_zupt * (z_zupt  - H_zupt * error_states);
+//         ins_att_ = CoreNav::dcm_to_eul((Eigen::MatrixXd::Identity(3,3)- CoreNav::skew_symm(error_states_.segment(0,3)))*Cnb.transpose());
+//         ins_vel_ = vel - error_states_.segment(3,3);
+//         ins_pos_ = llh - error_states_.segment(6,3);
+//         error_states_.segment(0,9)<<Eigen::VectorXd::Zero(9);
+//         P_=(Eigen::MatrixXd::Identity(15,15) - K_zupt * H_zupt) * P * ( Eigen::MatrixXd::Identity(15,15) - K_zupt * H_zupt ).transpose() + K_zupt * R_zupt * K_zupt.transpose();
+//         return;
+// }
+// Zero ang. update

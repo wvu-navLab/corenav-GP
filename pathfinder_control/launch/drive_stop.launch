@@ -1,0 +1,7 @@
+<?xml version="1.0"?>
+
+<launch>
+
+    <node pkg="pathfinder_control" type="drive_straight_with_stop_node" name="pathfinder_control"/>
+
+</launch>

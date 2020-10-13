@@ -1,0 +1,13 @@
+<launch>
+    <!-- <arg name="robot_namespace" default="/scout_1"/> -->
+    <param name="/use_sim_time" value="false"/>
+    <node  name="imu_filter" pkg="imu_filter" type="imu_filter" clear_params="true" output="screen">
+
+	   <!-- <param name="imu_raw" value="$(arg robot_namespace)/imu" />
+     <param name="imu_filt" value="$(arg robot_namespace)/imu_filtered" /> -->
+
+     <remap from="imu_raw" to="imu/dataAdis"/>
+     <remap from="imu/data_filtered" to="imu_filtered"/>
+
+    </node>
+</launch>

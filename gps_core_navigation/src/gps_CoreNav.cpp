@@ -1,7 +1,3 @@
-/*
- * Author: Cagri
- */
-
 #include <gps_core_navigation/gps_CoreNav.h>
 #include <gps_core_navigation/InsConst.h>
 #include <gps_core_navigation/InsUtils.h>
@@ -67,15 +63,6 @@ bool gps_CoreNav::Init(const ros::NodeHandle& n){
         // P_pred=P;
         P_=P;
         P_pred=P_;
-        // R_ << 0.00045,0,0,0,
-        // 0,0.1152,0,0,
-        // 0,0,0.0025,0,
-        // 0,0,0,0.0025;
-
-        // R_IP << 0.00045,0,0,0,
-        // 0,0.1152,0,0,
-        // 0,0,0.0025,0,
-        // 0,0,0,0.0025;
 
         R_1<<0.5,0.5,0.0,0.0,
         1/T_r_, -1/T_r_, 0.0,0.0,
@@ -98,7 +85,7 @@ bool gps_CoreNav::Init(const ros::NodeHandle& n){
         0,std::pow(0.01,2),0,
         0,0,std::pow(0.0025,2);
 
-        R_holo << 0.05,0,0,0.05;
+        R_holo << 0.05,0,0,0.1;
 
         H11_<< 0.0,0.0,0.0;
         H12_ << 0.0,0.0,0.0;
@@ -144,9 +131,10 @@ bool gps_CoreNav::Init(const ros::NodeHandle& n){
                 0.0,0.0,0.0,0.0,0.0,std::pow(0.5,2);
 
 // ((10e-5)*pi/180)^2)*(1/250)
-        ins_att_ << init_roll, init_pitch, init_yaw;
-        ins_vel_ << init_vx, init_vy, init_vz;
-        ins_pos_ << init_x, init_y, init_z;
+        ins_attMinus_ << init_roll, init_pitch, init_yaw;
+        ins_velMinus_ << init_vx, init_vy, init_vz;
+        ins_posMinus_ << init_x, init_y, init_z;
+        psiEst = init_yaw;
         odomUptCount =0;
 
         saveCountOdom=0;
@@ -381,31 +369,25 @@ bearingprev=bearing;
 
         omega_b_ib_ << imu[3] -(init_bias_g_x)-bg_(0), imu[4] - (init_bias_g_y)- bg_(1), imu[5] -(init_bias_g_x) - bg_(2);
         f_ib_b_ << imu[0] -(init_bias_a_x)-ba_(0), imu[1] - (init_bias_a_y)- ba_(1), imu[2] -(-9.81-init_bias_a_z) - ba_(2);
-//------------------------------------------------------------------------------
-        //Attitude Update---------------------------------------------------------------
-        // input =insAtt(:,i-1),omega_ie,insLLH(:,i-1),omega_b_ib,ecc,Ro,insVel(:,i-1),dtIMU
-        // output= insAtt(:,i), Cb2n+,Cb2n-,Omega_n_en,Omega_n_ie,R_N,R_E,omega_n_in,omega_n_ie
-        //------------------------------------------------------------------------------
-        gps_CoreNav::Matrix3 CnbMinus = gps_CoreNav::eul_to_dcm(ins_att_[0],ins_att_[1],ins_att_[2]);
+
+        psiEst_minus=ins_attMinus_[2];
+
+        //Attitude Update
+        gps_CoreNav::Matrix3 CnbMinus = gps_CoreNav::eul_to_dcm(ins_attMinus_[0],ins_attMinus_[1],ins_attMinus_[2]);
         CbnMinus=CnbMinus.transpose();
-        omega_n_ie_ << INS::omega_ie*cos(ins_pos_[0]), 0.0, (-1.0)*INS::omega_ie*sin(ins_pos_[0]); // Checked
-        Omega_b_ib_ = gps_CoreNav::skew_symm( omega_b_ib_ );
-        Omega_n_ie_ = gps_CoreNav::skew_symm( omega_n_ie_ );
+        omega_n_ie_ << INS::omega_ie*cos(ins_posMinus_[0]), 0.0, (-1.0)*INS::omega_ie*sin(ins_posMinus_[0]);
+        Omega_b_ib_ <<  0, -omega_b_ib_(2), omega_b_ib_(1), omega_b_ib_(2), 0, -omega_b_ib_(0),-omega_b_ib_(1), omega_b_ib_(0), 0;
+        Omega_n_ie_ <<  0, INS::omega_ie*sin(ins_posMinus_(0)), 0, -INS::omega_ie*sin(ins_posMinus_(0)), 0,-INS::omega_ie*cos(ins_posMinus_(0)),0, INS::omega_ie*cos(ins_posMinus_(0)), 0;
         // Radius of Curvature for North-South Motion (eq. 2.105)
-        double R_N = INS::Ro*(1.0-pow(INS::ecc,2.0))/pow(1.0-pow(INS::ecc,2.0)*pow(sin(ins_pos_(0)),2.0),(3.0/2.0));
+        double R_N = INS::Ro*(1.0-pow(INS::ecc,2.0))/pow((1.0-pow(INS::ecc,2.0)*pow(sin(ins_posMinus_(0)),2.0)),(3.0/2.0));
         // Radius of Curvature in East-West Direction (eq. 2.106)
-        double R_E = INS::Ro/sqrt(1.0-pow(INS::ecc,2.0)*pow(sin(ins_pos_(0)),2.0));
+        double R_E = INS::Ro/pow((1.0-pow(INS::ecc,2.0)*pow(sin(ins_posMinus_(0)),2.0)),(1.0/2.0));
         //rotation rate vector
-
-        omega_n_en_ << ins_vel_(1)/(R_E+ins_pos_(2)),
-        (-1.0)*ins_vel_(0)/(R_N+ins_pos_(2)),
-        ((-1.0)*ins_vel_(1)*tan(ins_pos_(0)))/(R_E+ins_pos_(2));
-
-
-        Omega_n_en_ = gps_CoreNav::skew_symm( omega_n_en_ );
-        //eq. 2.48
+        omega_n_en_ << ins_velMinus_(1)/(R_E+ins_posMinus_(2)),
+        -ins_velMinus_(0)/(R_N+ins_posMinus_(2)),
+        (-ins_velMinus_(1)*tan(ins_posMinus_(0)))/(R_E+ins_posMinus_(2));
+        Omega_n_en_ << 0, -omega_n_en_(2), omega_n_en_(1), omega_n_en_(2), 0, -omega_n_en_(0), -omega_n_en_(1), omega_n_en_(0), 0;
         omega_n_in_ = omega_n_en_ + omega_n_ie_;
-
         //integrate considering body-rate, Earth-rate, and craft-rate
         gps_CoreNav::Matrix3 eye3=Eigen::Matrix3d::Identity();
         gps_CoreNav::Matrix3 zeros3=Eigen::Matrix3d::Zero(3,3);
@@ -413,91 +395,59 @@ bearingprev=bearing;
         CbnPlus=CbnMinus*(eye3+Omega_b_ib_*dt_imu_)-(Omega_n_ie_+ Omega_n_en_)*CbnMinus*dt_imu_;
         ins_att_= gps_CoreNav::dcm_to_eul( CbnPlus );
 
-        //------------------------------------------------------------------------------
-        // Velocity Update -------------------------------------------------------------
-        // input= Cb2nMinus, Cb2nPlus, v_ib_b,insVel(:,i-1),insLLH(:,i-1),omega_ie,Ro,ecc,dtIMU
-        // output=insVel(:,i)
-        //------------------------------------------------------------------------------
         gps_CoreNav::Vector3 V_n_ib;
-        //specific-force transformation (eq. 5.48)
+        //specific-force transformation
         V_n_ib=(1.0/2.0)*(CbnMinus+CbnPlus)*f_ib_b_*dt_imu_;
-        grav_ = gps_CoreNav::calc_gravity(ins_pos_(0),ins_pos_(2));
-        gps_CoreNav::Vector3 ins_velMinus(ins_vel_);
-        ins_vel_= ins_vel_ + V_n_ib +  (grav_ - (Omega_n_en_+2.0*(Omega_n_ie_))*ins_vel_)*dt_imu_;
-        //ROS_INFO("ins_vel = [%f,%f,%f]",ins_vel_[0],ins_vel_[1],ins_vel_[2]);
-        //------------------------------------------------------------------------------
-        // Position Update -------------------------------------------------------------
-        // input= insLLH(:,i-1),insVel(:,i),insVel(:,i-1),Ro,ecc,dtIMU
-        // output= insLLH(:,i)
-        //------------------------------------------------------------------------------
-        double heightPlus=ins_pos_(2)-(dt_imu_/2.0)*(ins_velMinus(2)+ins_vel_(2));
-        double latPlus = ins_pos_(0)+(dt_imu_/2.0)*(ins_velMinus(0)/(R_N+ins_pos_(2))+ins_vel_(0)/(R_N+heightPlus));
-        double R_EPlus=INS::Ro/sqrt(1.0-pow(INS::ecc,2.0)*pow(sin(latPlus),2.0));
-        double lonPlus=ins_pos_(1)+(dt_imu_/2.0)*(ins_velMinus(1)/((R_E+ins_pos_(2))*cos(ins_pos_(0)))+ins_vel_(1)/((R_EPlus+heightPlus)*cos(latPlus)));         //ins_pos_(1)
+        grav_ = gps_CoreNav::calc_gravity(ins_posMinus_(0),ins_posMinus_(2));
+        ins_vel_= ins_velMinus_ + V_n_ib +  (grav_ - (Omega_n_en_+2.0*(Omega_n_ie_))*ins_velMinus_)*dt_imu_;
 
+        // Position Update
+        double heightPlus=ins_posMinus_(2)-(dt_imu_/2.0)*(ins_velMinus_(2)+ins_vel_(2)); //ins_pos_(2)
+        double latPlus = ins_posMinus_(0)+(dt_imu_/2.0)*(ins_velMinus_(0)/(R_N+ins_posMinus_(2))+ins_vel_(0)/(R_N+heightPlus)); //ins_pos_(0)
+        double R_EPlus=INS::Ro/pow((1.0-pow(INS::ecc,2.0)*pow(sin(latPlus),2.0)),(1.0/2.0));
+        double lonPlus=ins_posMinus_(1)+(dt_imu_/2.0)*(ins_velMinus_(1)/((R_E+ins_posMinus_(2))*cos(ins_posMinus_(0)))+ins_vel_(1)/((R_EPlus+heightPlus)*cos(latPlus)));   //ins_pos_(1)
         ins_pos_ << latPlus,lonPlus,heightPlus;
 
-        //------------------------------------------------------------------------------
-        // State Transition Matrix -----------------------------------------------------
-        // input= R_EPlus,R_N,insLLH(:,i),insVel(:,i),dtIMU,Cb2nPlus,omega_ie,omega_n_in,f_ib_b
-        // output= STM
-        //------------------------------------------------------------------------------
+        // State Transition Matrix
         STM_ = gps_CoreNav::insErrorStateModel_LNF(R_EPlus, R_N, ins_pos_, ins_vel_, dt_imu_, CbnPlus, INS::omega_ie,omega_n_in_, f_ib_b_, INS::gravity);
 
+        // Error Propagation
         error_states_ = STM_*error_states_;
-        //------------------------------------------------------------------------------
-        // Q Matrix --------------------------------------------------------------------
-        //------------------------------------------------------------------------------
-        Q_ = gps_CoreNav::calc_Q(R_N,R_EPlus,ins_pos_, dt_imu_, CbnPlus, f_ib_b_);
-        //------------------------------------------------------------------------------
-        // P Matrix --------------------------------------------------------------------
-        //------------------------------------------------------------------------------
-        // std::cout << "P" << '\n'<< P << '\n';
-        // std::cout << "P_" << '\n'<< P_ << '\n';
+
+        // Q Matrix
+        Q_ = gps_CoreNav::calc_Q(R_N,R_E,ins_pos_, dt_imu_, CbnPlus, f_ib_b_);
+
+        // P Matrix
         P_=STM_*P_*STM_.transpose()+ Q_;
-        // std::cout << "P_2" << '\n'<< P_ << '\n';
-// ros::shutdown();
 
-        //------------------------------------------------------------------------------
-        // Measurement Matrix ----------------------------------------------------------
-        //------------------------------------------------------------------------------
-        gps_CoreNav::Matrix3 Cn2bPlus=CbnPlus.transpose();
-        gps_CoreNav::Vector3 omega_b_ie=Cn2bPlus*omega_n_ie_;
-        gps_CoreNav::Vector3 omega_b_ei=-1.0*omega_b_ie;
-        gps_CoreNav::Vector3 omega_b_eb=omega_b_ei+omega_b_ib_;
 
-        // TODO: WE NEED FIXED VALUES FOR STM Q AND P WHEN WE RUN THE GP
+        // Integrate IMU measurements for odometry Update
+          gps_CoreNav::Matrix3 Cn2bPlus=CbnPlus.transpose();
+          gps_CoreNav::Vector3 omega_b_ie=Cn2bPlus*omega_n_ie_;
+          gps_CoreNav::Vector3 omega_b_ei=-1.0*omega_b_ie;
+          gps_CoreNav::Vector3 omega_b_eb=omega_b_ei+omega_b_ib_;
+          gps_CoreNav::Matrix3 ins_vel_ss; //ins_vel_ skew symmetric
+          ins_vel_ss = gps_CoreNav::skew_symm(ins_vel_);
+          gps_CoreNav::Vector3 Val_H21(0,cos(ins_att_(0)),sin(ins_att_(0)));
 
-        if (has_odo_)
-        {
-                gps_CoreNav::Matrix3 ins_vel_ss; //ins_vel_ skew symmetric
-                ins_vel_ss = gps_CoreNav::skew_symm(ins_vel_);
-                gps_CoreNav::Vector3 Val_H21(0,cos(ins_att_(0)),sin(ins_att_(0)));
+          H11_ = H11_ + (eye3.row(0)*Cn2bPlus*ins_vel_ss*dt_imu_).transpose();
+          H12_ = H12_ + (eye3.row(0)*Cn2bPlus*dt_imu_).transpose();
+          H21_ = H21_ + (sin(ins_att_(1))*Val_H21.transpose()*Cn2bPlus*dt_imu_).transpose();
+          H31_ = H31_ + (eye3.row(1)*Cn2bPlus*ins_vel_ss*dt_imu_).transpose();
+          H32_ = H32_ + (eye3.row(1)*Cn2bPlus*dt_imu_).transpose();
+          H41_ = H41_ + (eye3.row(2)*Cn2bPlus*ins_vel_ss*dt_imu_).transpose();
+          H42_ = H42_ + (eye3.row(2)*Cn2bPlus*dt_imu_).transpose();
 
-                H11_ += eye3.row(0)*Cn2bPlus*ins_vel_ss*dt_imu_;
-                H12_ += eye3.row(0)*Cn2bPlus*dt_imu_;
-                H21_ += sin(ins_att_(1))*Val_H21.transpose()*Cn2bPlus*dt_imu_;
-                H31_ += eye3.row(1)*Cn2bPlus*ins_vel_ss*dt_imu_;
-                H32_ += eye3.row(1)*Cn2bPlus*dt_imu_;
-                H41_ += eye3.row(2)*Cn2bPlus*ins_vel_ss*dt_imu_;
-                H42_ += eye3.row(2)*Cn2bPlus*dt_imu_;
+          // Measurement Innovation -- integration part for INS -- eq 16.42
+          gps_CoreNav::Vector3 lb2f(-T_r_/2, 0.0, -INS::wheel_radius*2);
+          double tmp1 = eye3.row(0)*(Cn2bPlus*ins_vel_ + (gps_CoreNav::skew_symm(omega_b_eb)*lb2f));
+          double tmp2 = eye3.row(1)*(Cn2bPlus*ins_vel_ + (gps_CoreNav::skew_symm(omega_b_eb)*lb2f));
+          double tmp3 = eye3.row(2)*(Cn2bPlus*ins_vel_ + (gps_CoreNav::skew_symm(omega_b_eb)*lb2f));
 
-                gps_CoreNav::Matrix3 Omega_b_eb;
-                Omega_b_eb << 0.0, -1.0*omega_b_eb(2), omega_b_eb(1),
-                omega_b_eb(2), 0.0, -1.0*omega_b_eb(0),
-                -1.0*omega_b_eb(1), omega_b_eb(0), 0.0;
-
-                // Measurement Innovation -- integration part for INS -- eq 16.42
-                double tmp1 = eye3.row(0)*(Cn2bPlus*ins_vel_ + (gps_CoreNav::skew_symm(omega_b_eb)*(-0.272*(eye3.col(0)))));
-                double tmp2 = eye3.row(1)*(Cn2bPlus*ins_vel_ + (gps_CoreNav::skew_symm(omega_b_eb)*(-0.272*(eye3.col(0)))));
-                double tmp3 = eye3.row(2)*(Cn2bPlus*ins_vel_ + (gps_CoreNav::skew_symm(omega_b_eb)*(-0.272*(eye3.col(0)))));
-
-                z11_ += tmp1*dt_imu_;
-                z21_ += cos(ins_att_(1))*dt_imu_;
-                z31_ += tmp2* dt_imu_;
-                z41_ += tmp3 * dt_imu_;
-
-        }
+          z11_ =z11_ + tmp1*dt_imu_;
+          z21_ =z21_ + cos(ins_att_(1))*dt_imu_;
+          z31_ =z31_ + tmp2* dt_imu_;
+          z41_ =z41_ + tmp3* dt_imu_;
 
 
         gps_CoreNav::NonHolonomic(ins_vel_, ins_att_, ins_pos_, error_states_, P_, omega_b_ib_);
@@ -522,14 +472,19 @@ bearingprev=bearing;
 
         // std::cout << "diff" << latitude_prev-latitude_now<<'\n';
         }
-        // ROS_INFO("Outside");
 
-        ba_(0)=error_states_(9);
-        ba_(1)=error_states_(10);
-        ba_(2)=error_states_(11);
-        bg_(0)=error_states_(12);
-        bg_(1)=error_states_(13);
-        bg_(2)=error_states_(14);
+        ins_attMinus_=ins_att_;
+        ins_velMinus_=ins_vel_;
+        ins_posMinus_=ins_pos_;
+
+        ba_(0)=ba_(0)+error_states_(9);
+        ba_(1)=ba_(1)+error_states_(10);
+        ba_(2)=ba_(2)+error_states_(11);
+        bg_(0)=bg_(0)+error_states_(12);
+        bg_(1)=bg_(1)+error_states_(13);
+        bg_(2)=bg_(2)+error_states_(14);
+
+        error_states_.segment(9,6)<<Eigen::VectorXd::Zero(6);
 
         ins_enu_ << gps_CoreNav::llh_to_enu(ins_pos_[0],ins_pos_[1],ins_pos_[2]);
         ins_cn_<<ins_att_,ins_vel_,ins_enu_;
@@ -567,24 +522,24 @@ bearingprev=bearing;
         PublishStates(ins_pos_cov_p, position_cov_pub_p);
         PublishStatesCN(ins_cn_, cn_pub_);
 
-        // ros::NodeHandle nh;
-if (has_gpsECEF_ && has_gpsLLH_) {
-  // nh.setParam("/init_true_ecef_x", gps_ecef[0]);
-  // nh.setParam("/init_true_ecef_y", gps_ecef[1]);
-  // nh.setParam("/init_true_ecef_z", gps_ecef[2]);
-  // nh.setParam("/init_true_llh_x", gps_llh[0]);
-  // nh.setParam("/init_true_llh_y", gps_llh[1]);
-  // nh.setParam("/init_true_llh_z", gps_llh[2]);
-  // nh.setParam("/init_true_yaw", ins_att_[2]);
-
-// std::string path =  ros::package::getPath("core_nav") + "/config/init_params.yaml";
-// writeParams(path, ins_bias_a, ins_bias_g, ins_xyz_, ins_pos_, ins_att_);
-// ROS_INFO_THROTTLE(2,"Wrote to CoreNav param file: ");
-// std::cout << path.c_str() << std::endl;
-// has_gpsECEF_ = false;
-// has_gpsLLH_ = false;
-
-}
+//         // ros::NodeHandle nh;
+// if (has_gpsECEF_ && has_gpsLLH_) {
+//   // nh.setParam("/init_true_ecef_x", gps_ecef[0]);
+//   // nh.setParam("/init_true_ecef_y", gps_ecef[1]);
+//   // nh.setParam("/init_true_ecef_z", gps_ecef[2]);
+//   // nh.setParam("/init_true_llh_x", gps_llh[0]);
+//   // nh.setParam("/init_true_llh_y", gps_llh[1]);
+//   // nh.setParam("/init_true_llh_z", gps_llh[2]);
+//   // nh.setParam("/init_true_yaw", ins_att_[2]);
+//
+// // std::string path =  ros::package::getPath("core_nav") + "/config/init_params.yaml";
+// // writeParams(path, ins_bias_a, ins_bias_g, ins_xyz_, ins_pos_, ins_att_);
+// // ROS_INFO_THROTTLE(2,"Wrote to CoreNav param file: ");
+// // std::cout << path.c_str() << std::endl;
+// // has_gpsECEF_ = false;
+// // has_gpsLLH_ = false;
+//
+// }
 
 
         // ROS_WARN_THROTTLE(1, "P matrix:", P_);
@@ -627,30 +582,35 @@ void gps_CoreNav::writeParams(std::string path_to_param_file, const gps_CoreNav:
         paramsFile << std::fixed << std::setprecision(12) << "  y: " << (ins_pos_(1))<< std::endl;
         paramsFile << std::fixed << std::setprecision(12) << "  z: " << (ins_pos_(2))<< std::endl;
 
-        paramsFile << "init_yaw:" << std::endl;
+        paramsFile << "init_att:" << std::endl;
         // paramsFile << std::fixed << std::setprecision(12) << "  x: " << (ins_pos_(0))<< std::endl;
         // paramsFile << std::fixed << std::setprecision(12) << "  y: " << (ins_pos_(1))<< std::endl;
-        paramsFile << std::fixed << std::setprecision(12) << "  z: " << (bearing)<< std::endl;
+        // paramsFile << std::fixed << std::setprecision(12) << "  z: " << (bearing)<< std::endl;
+        paramsFile << std::fixed << std::setprecision(12) << "  x: " << (ins_att_(0))<< std::endl;
+        paramsFile << std::fixed << std::setprecision(12) << "  y: " << (ins_att_(1))<< std::endl;
+        paramsFile << std::fixed << std::setprecision(12) << "  z: " << (ins_att_(2))<< std::endl;
     // Close file
     paramsFile.close();
 }
 void gps_CoreNav::Update(const gps_CoreNav::Vector13& odo,const gps_CoreNav::Vector4& joint)
 {
         odomUptCount=odomUptCount+1;
-        rearVel_ = (joint[3]-joint[2])*INS::wheel_radius/2.0;
-        headRate_ = ((-joint[0]-joint[2])/2.0-(joint[3]+joint[1])/2.0)*INS::wheel_radius/(0.5); //TUNE 0.5
 
+        velFrontLeft_ = -joint[0]*INS::wheel_radius;
+        velFrontRight_=  joint[1]*INS::wheel_radius;
+        velBackLeft_  = -joint[2]*INS::wheel_radius;
+        velBackRight_ =  joint[3]*INS::wheel_radius;
 
-        velFrontLeft_=-joint[0]*INS::wheel_radius;
-        velFrontRight_=joint[1]*INS::wheel_radius;
-        velBackLeft_=-joint[2]*INS::wheel_radius;
-        velBackRight_=joint[3]*INS::wheel_radius;
+        rearVel_=(velBackLeft_+velBackRight_)/2.0;
+
+        double frontVel =(velFrontLeft_+velFrontRight_)/2.0;
+        headRate_=(velBackLeft_-velBackRight_)/T_r_;
 
         dt_odo_ = odo_stamp_curr_ - odo_stamp_prev_;
         gps_CoreNav::Matrix3 Cn2bUnc=gps_CoreNav::eul_to_dcm(ins_att_(0),ins_att_(1),ins_att_(2));
         H11_ =-H11_/dt_odo_;
         H12_ =-H12_/dt_odo_;
-        H21_ = H21_*(ins_att_(2)-psiEst)/(dt_odo_*dt_odo_); // TODO Check here
+        H21_ = H21_*(ins_att_(2)-psiEst_minus)/(dt_odo_*dt_odo_);
         H31_ =-H31_/dt_odo_;
         H32_ =-H32_/dt_odo_;
         H24_ =-(cos(ins_att_(1))*eye3.row(2)*Cn2bUnc.transpose())/dt_odo_;
@@ -660,10 +620,12 @@ void gps_CoreNav::Update(const gps_CoreNav::Vector13& odo,const gps_CoreNav::Vec
         double z1_odom=rearVel_*(1-s_or_);
         double z2_odom=headRate_*(1-s_or_)-((z11_/dt_odo_)/T_r_)*s_delta_or_;
         double z1_ins=z11_;
-        double z2_ins=(ins_att_(2)-init_yaw)*z21_; // TODO Check here
+        double z2_ins=(ins_att_(2)-psiEst)*z21_;// psiEst in here should be the heading between the updates (i.e., psiEst(1), psiEst(26), psiEst(51)
+
         if (abs(z2_ins) > 0.5) {
                 z2_ins=0.0;
         }
+
         double z3_ins=z31_;
         double z4_ins=z41_;
         z11_=z1_odom-z1_ins/dt_odo_;
@@ -681,27 +643,20 @@ void gps_CoreNav::Update(const gps_CoreNav::Vector13& odo,const gps_CoreNav::Vec
 
         error_states_ = error_states_+K_*(Z_-H_*error_states_);
 
-        gps_CoreNav::Vector3 att_error_states(error_states_(0),error_states_(1),error_states_(2));
-        gps_CoreNav::Matrix3 error_states_ss;
-        error_states_ss=gps_CoreNav::skew_symm(att_error_states);
-        gps_CoreNav::Matrix3 insAttEst;
-        insAttEst<<(eye3-error_states_ss)*Cn2bUnc.transpose();
-
-        double phiEst = atan2(insAttEst(2,1),insAttEst(2,2));
-        double thetaEst = asin(-insAttEst(2,0));
-        double psiEst = atan2(insAttEst(1,0),insAttEst(0,0));
-
-        ins_att_ << phiEst, thetaEst, psiEst;
-        ins_vel_ << ins_vel_(0)-error_states_(3), ins_vel_(1)-error_states_(4), ins_vel_(2)-error_states_(5);
-        ins_pos_ << ins_pos_(0)-error_states_(6), ins_pos_(1)-error_states_(7), ins_pos_(2)-error_states_(8);
+        ins_att_ = gps_CoreNav::dcm_to_eul((Eigen::MatrixXd::Identity(3,3)- gps_CoreNav::skew_symm(error_states_.segment(0,3)))*Cn2bUnc.transpose());
+        ins_vel_ = ins_vel_ - error_states_.segment(3,3);
+        ins_pos_ = ins_pos_ - error_states_.segment(6,3);
 
 
+        ins_attMinus_=ins_att_;
+        ins_velMinus_=ins_vel_;
+        ins_posMinus_=ins_pos_;
 
-        init_yaw=ins_att_(2);
+        psiEst=ins_att_[2];
 
         error_states_.segment(0,9)<<Eigen::VectorXd::Zero(9);
 
-        P_=(Eigen::MatrixXd::Identity(15,15) - K_*H_) * P_ * ( Eigen::MatrixXd::Identity(15,15) - K_ * H_ ).transpose() + K_ * R_ * K_.transpose();
+        P_=(Eigen::MatrixXd::Identity(15,15) - K_*H_) * P_* ( Eigen::MatrixXd::Identity(15,15) - K_ * H_ ).transpose() + K_ * R_ * K_.transpose();
 
 
         double vlin=eye3.row(0)*(Cn2bUnc*ins_vel_);

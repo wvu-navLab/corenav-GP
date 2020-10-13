@@ -23,9 +23,16 @@ add_message_files(
     GP_Output.msg
 )
 
+ add_service_files(
+   FILES
+   SetStopping.srv
+ )
+
+
 generate_messages(
     DEPENDENCIES
     std_msgs
+    geometry_msgs
 )
 
 catkin_package(

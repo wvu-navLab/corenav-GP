@@ -261,11 +261,9 @@ public:
         double odomUptCount, startRecording, stopRecording, saveCountOdom;
         double delta_time_odometry_;
         double gravity;
-        // double Pvec[225];
-        // double Qvec[225];
-        // double STMvec[225];
-        // double Hvec[60];
-        geometry_msgs::Point PosVec;
+        double Pvec[225];
+        double Qvec[225];
+        double STMvec[225];
 
 };
 #endif

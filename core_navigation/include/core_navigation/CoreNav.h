@@ -116,6 +116,7 @@ public:
         void orkf1Update(Eigen::RowVectorXd res);
         void orkf2Update(Eigen::RowVectorXd res);
         void orkf3Update(Eigen::RowVectorXd res);
+        void orkf5Update(Eigen::RowVectorXd res);
         void orkf4Update(Eigen::RowVectorXd res);
 
         void Update(const CoreNav::Vector13& odo,const CoreNav::Vector4& joint);

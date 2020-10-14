@@ -568,12 +568,13 @@ void CoreNav::Update(const CoreNav::Vector13& odo,const CoreNav::Vector4& joint)
 
         //  ADD UPDATE FUNCTION HERE  // *********************************************************
       //****************************************************************************************
-        //normalUpdate(res);   // Standard filter
+        //normalUpdate(res); // Standard filter
         //huberUpdate(res);  // Huber-ICE filter (Karlgraad + Ryan)
-        orkf2Update(res);  // Variational Filter by Sarkka
-        //orkf1Update(res);  // Variational Filter by Agememnoni
-        //orkf3Update(res);  // Covariance Scaling filter by Yang
-        //orkf4Update(res);  // Another scaling filter by Chang
+        orkf1Update(res);  // Variational Filter by Agememnoni An outlier robust Kalman Filter
+        //orkf2Update(res);  // Variational Filter by Sarkka Recursive outlier-robust filtering and smoothing for nonlinear systems using the multivariate Student-t distribution
+        //orkf3Update(res);  // Covariance Scaling filter by Yang Adaptively robust filtering for kinematic geodetic positioning
+        //orkf4Update(res);  // Another scaling filter by G Chang  Robust Kalman filtering based on Mahalanobis distance as outlier judging criterion
+        //orkf5Update(res);  // Adaptive filter by Akhlaghi  https://arxiv.org/pdf/1702.00884.pdf
 
         ins_att_ = CoreNav::dcm_to_eul((Eigen::MatrixXd::Identity(3,3)- CoreNav::skew_symm(error_states_.segment(0,3)))*Cn2bUnc.transpose());
         ins_vel_ = ins_vel_ - error_states_.segment(3,3);
@@ -755,6 +756,7 @@ void CoreNav::Update(const CoreNav::Vector13& odo,const CoreNav::Vector4& joint)
 
 void CoreNav::normalUpdate(Eigen::RowVectorXd res){
 
+        // Standard filter
         ROS_INFO_ONCE("Running normal update equations .. ");
         K_ << P_*H_.transpose()*(H_*P_*H_.transpose()+R_).inverse();
         error_states_ = error_states_+K_*res.transpose();
@@ -764,6 +766,7 @@ void CoreNav::normalUpdate(Eigen::RowVectorXd res){
 
 void CoreNav::huberUpdate(Eigen::RowVectorXd res){
 
+        //Huber-ICE filter (Karlgraad + Ryan) Non-linear Regression HUber-Kalman Filtering and Fixed-Interval Smoothing
         iceclass.icefunc(res);
 
         std::vector<mixtureComponents> globalMixtureModelLatest = iceclass.globalMixtureModel;
@@ -892,67 +895,80 @@ void CoreNav::huberUpdate(Eigen::RowVectorXd res){
 
 void CoreNav::orkf1Update(Eigen::RowVectorXd res){
 
+      //Variational Filter by Agememnoni An outlier robust Kalman Filter
+
       ROS_INFO_ONCE(" Running variational filter ");
       double likelihood = 0.0;
-      int s = 3;  // s > d-1; d is the dimension of the measurements, here it is 4
+      int s = 5;  // s > d-1; d is the dimension of the measurements, here it is 4
       double threshold = 0.9;
-      MatrixXd R_post(4,4);
-      // double preLikelihood = 2.0;
-
-      R_post = R_;
-
       double mahalcost(0.0);
       mahalcost = res*(H_*P_*H_.transpose()+R_).inverse()*res.transpose();
       double critical_valchi4 = 9.488;
+      // double K_k;
+      // double scale = mahalcost/critical_valchi4;
+      // if (scale < 1.0){
+      //     K_k = 1.0;
+      // }
+      // else{
+      //   K_k = scale;
+      // }
 
-      if (mahalcost > critical_valchi4){
-
-          for (int i = 0; i < 30; i++){
-
-              K_ << P_*H_.transpose()*(H_*P_*H_.transpose()+R_post).inverse();
-
-              error_states_ = error_states_+K_*(Z_-H_*error_states_);
-
-              P_= (Eigen::MatrixXd::Identity(15,15) - K_*H_) * P_ * ( Eigen::MatrixXd::Identity(15,15) - K_ * H_ ).transpose() + K_ * R_post * K_.transpose();
-
-              res = Z_-H_*error_states_ ;
-
-              R_post = (s*R_ + res.transpose()*res + H_*P_*H_.transpose())/(s+1);
-
-              double quad = res*R_post.inverse()*res.transpose();
-
-              likelihood = std::pow((1 + quad/s), -(s+1)/2);
+      MatrixXd R_post(4,4);
+      R_post = R_;
+      //R_post = (K_k -1)*H_*P_*H_.transpose()+ K_k*R_;
 
 
-              std::cout << "Lilelihood value --  " << likelihood << endl;
-          }
+      for (int i = 0; i < 30; i++){
 
-          R_ = R_post;
+          K_ << P_*H_.transpose()*(H_*P_*H_.transpose()+R_post).inverse();
+
+          error_states_ = error_states_+K_*(Z_-H_*error_states_);
+
+          P_= (Eigen::MatrixXd::Identity(15,15) - K_*H_) * P_ * ( Eigen::MatrixXd::Identity(15,15) - K_ * H_ ).transpose() + K_ * R_post * K_.transpose();
+
+          res = Z_-H_*error_states_ ;
+
+          R_post = (s*R_ + res.transpose()*res + H_*P_*H_.transpose())/(s+1);
+
+          double quad = res*R_post.inverse()*res.transpose();
+
+          likelihood = std::pow((1 + quad/s), -(s+1)/2);
+
+
+          std::cout << "Lilelihood value --  " << likelihood << endl;
       }
-    else{
-              ROS_INFO("  Measurement is inlier ");
-      }
 
-      ROS_INFO(" Converged ... ");
+      cout << " Done all iterations " << endl;
+
+    //      R_ = R_post;
+    //   }
+    // else{
+    //           ROS_INFO("  Measurement is inlier ");
+    //   }
+    //
+    //   ROS_INFO(" Converged ... ");
 
   }
 
 
 void CoreNav::orkf2Update(Eigen::RowVectorXd res){
 
-        double w0 = 0.5;
+        //Variational Filter by Sarkka Recursive outlier-robust filtering and smoothing for nonlinear systems using the multivariate Student-t distribution
+
         double lambda = 1;
         double neu = 4; // parameter for gamma prior for lambda
         double d = 4;
-        int N = 10; // Dimension of the measurements
+        double k = 1;   // scaling factor for UKF
+        int N = 4;
         int n = 15; //Dimension of the state
+        double w0 = k/(n+k);
 
         for(int j = 0; j < N; j++){
 
           std::vector<CoreNav::Vector15> sigma_pts;
           sigma_pts.push_back(error_states_);
 
-          std::vector<int> weights(31,(1-w0)/30);
+          std::vector<int> weights(31,1/(2*(n+k)));
           weights[0] = w0;
 
           K_ << P_*H_.transpose()*(H_*P_*H_.transpose()+ (1/lambda)*R_).inverse();
@@ -965,8 +981,9 @@ void CoreNav::orkf2Update(Eigen::RowVectorXd res){
           Eigen::MatrixXd S = lltofcov.matrixL();
           P_sqrt = std::pow((n/(1 - w0)),0.5)*S; //calculate the square root of the covariance matrix
           cout << " Done " << endl;
-          cout << P_sqrt << endl;
+          // cout << P_sqrt << endl;
           for(int j = 0; j < 15; j++){
+            //cout << j << endl;
 
             CoreNav::Vector15 sig_error_state1, sig_error_state2;
 
@@ -977,24 +994,32 @@ void CoreNav::orkf2Update(Eigen::RowVectorXd res){
             sigma_pts.push_back(sig_error_state2);
           }
 
+          cout << "Done with pushbacks " <<  endl;
           // now calculate the expected value of the measurement noise matrix with respect to the posterior distribution
           MatrixXd R_post(4,4);
-          R_post << 0,0,0,0;
-          0,0,0,0;
-          0,0,0,0;
-          0,0,0,0;
+          R_post << 0.0,0.0,0.0,0.0,
+          0.0,0.0,0.0,0.0,
+          0.0,0.0,0.0,0.0,
+          0.0,0.0,0.0,0.0;
+
+          cout <<" calculating R " << endl;
           for(int i = 0; i < sigma_pts.size(); i++){
+            // cout << i << endl;
             res = Z_-H_*sigma_pts[i];
             R_post = R_post + weights[i]*res.transpose()*res;
           }
 
+          // cout << R_post << endl;
           lambda = (neu + d )/(neu + (R_post*R_.inverse()).trace());
+          cout << "Calculating lambda - " << lambda << endl;
 
         }
 
 }
 
 void CoreNav::orkf3Update(Eigen::RowVectorXd res){
+
+        //Covariance Scaling filter by Yang Adaptively robust filtering for kinematic geodetic positioning
 
         ROS_INFO_ONCE(" Running covariance-scaling filter ");
         MatrixXd R_post(4,4);
@@ -1019,6 +1044,8 @@ void CoreNav::orkf3Update(Eigen::RowVectorXd res){
 
 void CoreNav::orkf4Update(Eigen::RowVectorXd res){
 
+        //Another scaling filter by G Chang  Robust Kalman filtering based on Mahalanobis distance as outlier judging criterion
+
         double mahalcost(0.0);
         mahalcost = res*(H_*P_*H_.transpose()+R_).inverse()*res.transpose();
         double critical_valchi4 = 9.488;
@@ -1026,18 +1053,42 @@ void CoreNav::orkf4Update(Eigen::RowVectorXd res){
         double K_k;
         double scale = mahalcost/critical_valchi4;
 
-        if (K_k < 1.0){
+        if (scale < 1.0){
             K_k = 1.0;
         }
         else{
           K_k = scale;
         }
 
-        K_ << P_*H_.transpose()*((K_k -1)*H_*P_*H_.transpose()+ K_k*R_).inverse();
+        MatrixXd R_post(4,4);
+        R_post = (K_k -1)*H_*P_*H_.transpose()+ K_k*R_;
+
+        K_ << P_*H_.transpose()*(H_*P_*H_.transpose()+ R_post).inverse();
         error_states_ = error_states_+K_*res.transpose();
+        P_= (Eigen::MatrixXd::Identity(15,15) - K_*H_) * P_ * ( Eigen::MatrixXd::Identity(15,15) - K_ * H_ ).transpose() + K_ * R_post * K_.transpose();
+
+}
+
+void CoreNav::orkf5Update(Eigen::RowVectorXd res){
+
+        // Adaptive filter by Akhlaghi  https://arxiv.org/pdf/1702.00884.pdf
+        double alpha = 0.3;  //fading factor
+
+        K_ << P_*H_.transpose()*(H_*P_*H_.transpose()+R_).inverse();
+
+        error_states_ = error_states_+K_*res.transpose();
+
+        Eigen::RowVectorXd residual(4);
+
+        residual = Z_-H_*error_states_ ;
+
+        R_ = alpha*R_ + (1 - alpha)*(residual.transpose()*residual +  H_*P_*H_.transpose());
+        K_ << P_*H_.transpose()*(H_*P_*H_.transpose()+R_).inverse();
         P_= (Eigen::MatrixXd::Identity(15,15) - K_*H_) * P_ * ( Eigen::MatrixXd::Identity(15,15) - K_ * H_ ).transpose() + K_ * R_ * K_.transpose();
 
 }
+
+
 
 void CoreNav::GPCallBack(const core_nav::GP_Output::ConstPtr& gp_data_in_){
     this->gp_data_.mean = gp_data_in_->mean;

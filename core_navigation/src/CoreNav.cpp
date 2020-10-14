@@ -39,6 +39,7 @@ ROS_WARN_THROTTLE(5,"Recording GP Input between %.2f sec and %.2f sec",startReco
         omega_b_ib_ << imu[3] - bg_(0), imu[4] - bg_(1), imu[5] - bg_(2);
         f_ib_b_ << imu[0] - ba_(0), imu[1] - ba_(1), imu[2] - ba_(2);
         psiEst_minus=ins_attMinus_[2];
+
         //Attitude Update
         CoreNav::Matrix3 CnbMinus = CoreNav::eul_to_dcm(ins_attMinus_[0],ins_attMinus_[1],ins_attMinus_[2]);
         CbnMinus=CnbMinus.transpose();
@@ -63,6 +64,7 @@ ROS_WARN_THROTTLE(5,"Recording GP Input between %.2f sec and %.2f sec",startReco
         ins_att_= CoreNav::dcm_to_eul( CbnPlus );
 
         CoreNav::Vector3 V_n_ib;
+
         //specific-force transformation
         V_n_ib=(1.0/2.0)*(CbnMinus+CbnPlus)*f_ib_b_*dt_imu_;
         grav_ = CoreNav::calc_gravity(ins_posMinus_(0),ins_posMinus_(2));
@@ -106,8 +108,6 @@ ROS_WARN_THROTTLE(5,"Recording GP Input between %.2f sec and %.2f sec",startReco
           H42_ = H42_ + (eye3.row(2)*Cn2bPlus*dt_imu_).transpose();
 
           // Measurement Innovation -- integration part for INS -- eq 16.42
-          // CoreNav::Vector3 lb2f(-T_r_/2, 0.0, -INS::wheel_radius*2);
-          // CoreNav::Vector3 lb2f(-0.272, 0.0, 0.0);
           CoreNav::Vector3 lb2f(-T_r_/2, 0.0, -INS::wheel_radius*2);
           double tmp1 = eye3.row(0)*(Cn2bPlus*ins_vel_ + (CoreNav::skew_symm(omega_b_eb)*lb2f));
           double tmp2 = eye3.row(1)*(Cn2bPlus*ins_vel_ + (CoreNav::skew_symm(omega_b_eb)*lb2f));
@@ -119,20 +119,17 @@ ROS_WARN_THROTTLE(5,"Recording GP Input between %.2f sec and %.2f sec",startReco
           z41_ =z41_ + tmp3* dt_imu_;
 
         // NonHolonomic Update
-        // CoreNav::NonHolonomic(imu, ins_vel_, ins_att_, ins_pos_, error_states_, P_, omega_b_ib_);
         CoreNav::NonHolonomic(ins_vel_, ins_att_, ins_pos_, error_states_, P_, omega_b_ib_);
 
         // Zero-Updates
         if ( std::abs(rearVel_) < 0.005) //
         {
-                // CoreNav::zupt(ins_vel_, ins_att_, ins_pos_, error_states_, P_);
                 CoreNav::zeroUpdate(ins_vel_, ins_att_, ins_pos_, error_states_, P_, omega_b_ib_);
         }
 
         ins_attMinus_=ins_att_;
         ins_velMinus_=ins_vel_;
         ins_posMinus_=ins_pos_;
-
 
         ba_(0)=ba_(0)+error_states_(9);
         ba_(1)=ba_(1)+error_states_(10);
@@ -142,13 +139,6 @@ ROS_WARN_THROTTLE(5,"Recording GP Input between %.2f sec and %.2f sec",startReco
         bg_(2)=bg_(2)+error_states_(14);
 
         error_states_.segment(9,6)<<Eigen::VectorXd::Zero(6);
-
-        // ba_(0)=error_states_(9);
-        // ba_(1)=error_states_(10);
-        // ba_(2)=error_states_(11);
-        // bg_(0)=error_states_(12);
-        // bg_(1)=error_states_(13);
-        // bg_(2)=error_states_(14);
 
         ins_enu_ << CoreNav::llh_to_enu(ins_pos_[0],ins_pos_[1],ins_pos_[2]);
         ins_cn_<<ins_att_,ins_vel_,ins_enu_;
@@ -165,7 +155,6 @@ ROS_WARN_THROTTLE(5,"Recording GP Input between %.2f sec and %.2f sec",startReco
 
         PublishStatesCN(ins_cn_, cn_pub_);
 
-
         return;
 }
 void CoreNav::Update(){
@@ -181,10 +170,8 @@ void CoreNav::Update(){
 
         double frontVel =(velFrontLeft_+velFrontRight_)/2.0;
         headRate_=(velBackLeft_-velBackRight_)/T_r_;
-        // dt_odo_ = odo_stamp_curr_ - odo_stamp_prev_;
         dt_odo_ = joint_stamp_curr_ - joint_stamp_prev_;
         delta_time_odometry_=delta_time_odometry_+dt_odo_;
-        // ROS_INFO_THROTTLE(5,"delta_time_odometry_ : %.2f", delta_time_odometry_);
 
         CoreNav::Matrix3 Cn2bUnc=CoreNav::eul_to_dcm(ins_att_(0),ins_att_(1),ins_att_(2));
         H11_ =-H11_/dt_odo_;
@@ -243,7 +230,6 @@ void CoreNav::Update(){
         double vlin=eye3.row(0)*(Cn2bUnc*ins_vel_);
         double slip= std::max(std::max(((velFrontRight_)-vlin)/(velFrontRight_),((velBackRight_)-vlin)/(velBackRight_)),std::max(((velFrontLeft_)-vlin)/(velFrontLeft_),((velBackLeft_)-vlin)/(velBackLeft_)));
 
-
         if (std::abs(rearVel_)<0.001)
         {
                 slip=0.0;
@@ -263,9 +249,7 @@ void CoreNav::Update(){
 
 if (slip !=0.0 && slip !=-1.0 && slip !=1.0 && fabs(cmd[0])>0.2) //&& cmd_vel == 1
 {
-  if (first_driving_flag) //this flag is true at the beginning and only true for the first driving, then it is always false --> check line 596.
-  // firstDrivingflag
-  // flag_driving = (slip !=0.0 && slip !=-1.0 && slip !=1.0 ) && cmd_vel == 1
+  if (first_driving_flag) //this flag is true at the beginning and only true for the first driving, then it is always false
   {
     ROS_WARN_ONCE("Driving Started at %.2f sec", odomUptCount/10.0);
     saveCountOdom= odomUptCount;
@@ -273,12 +257,9 @@ if (slip !=0.0 && slip !=-1.0 && slip !=1.0 && fabs(cmd[0])>0.2) //&& cmd_vel ==
     stopRecording=startRecording+150; ////ros::Time::Duration(15)
     ROS_INFO_ONCE("Recording will be started at %.2f sec", startRecording/10.0);
     ROS_INFO_ONCE("Recording will be stopped at %.2f sec", stopRecording/10.0);
-    // ROS_ERROR("XYerror1 %.12f meters", xy_errSlip);
 
     first_driving_flag=false; // firstDrivingflag
   }
-
-
 
   if (odomUptCount > startRecording && odomUptCount < stopRecording && !gp_flag) //between startRecording and stopRecording counts, 1 count is 0.1 second. and if gp_flag is false. gp_flag is initialized as false.
   {
@@ -287,10 +268,8 @@ if (slip !=0.0 && slip !=-1.0 && slip !=1.0 && fabs(cmd[0])>0.2) //&& cmd_vel ==
     {
       ROS_ERROR_ONCE("SLIP IS NaN - Restart required");
     }
-    // ROS_WARN_THROTTLE(10,"Recording GP Input between %.2f sec and %.2f sec",startRecording/10.0,stopRecording/10.0);
-    //
     slip_msg.slip_array.push_back(slip);
-    slip_msg.time_array.push_back(odomUptCount); //delta_time_odometry_
+    slip_msg.time_array.push_back(odomUptCount);
 
   }
   if (odomUptCount>=stopRecording) // When the odomUptCount is equal to the stop recording time
@@ -301,18 +280,15 @@ if (slip !=0.0 && slip !=-1.0 && slip !=1.0 && fabs(cmd[0])>0.2) //&& cmd_vel ==
     if(!gp_flag) //and if gp_flag is false make the gp_flag true, and publish the slip_msg to Gaussian Process, then delete the data.
     {
             ROS_WARN("Publishing GP Input at %.2f sec", stopRecording/10.0);
-            // ROS_WARN()
             gp_flag=true;
             ROS_WARN_STREAM("slip_message size: "<< slip_msg.slip_array.size());
             ROS_WARN_STREAM("time_message size: "<< slip_msg.time_array.size());
-            // ROS_WARN_STREAM("time_message size3: "<< slip_msg.size());
             if (slip_msg.slip_array.size()==0) {
               ROS_ERROR("SLIP MESSAGE IS EMPTY");
             }
             else{
               gp_pub.publish(slip_msg);
             }
-
 
             slip_msg.slip_array.clear();
             slip_msg.time_array.clear();
@@ -324,7 +300,7 @@ if (slip !=0.0 && slip !=-1.0 && slip !=1.0 && fabs(cmd[0])>0.2) //&& cmd_vel ==
 
         new_stop_data_arrived_ = false; // Set the flag back to false, so that this does not happen again until new data comes in on the subscriber callback and sets this flag back to true
         startRecording=stopRecording+ceil(cmd_stop_)*10+10+30;
-        stopRecording=startRecording+150; //It should be 150...
+        stopRecording=startRecording+150;
         ROS_WARN("Start Next Recording at %.2f", startRecording/10);
         ROS_WARN("Stop Next Recording at %.2f", stopRecording/10);
         gp_flag =false; // DONT FORGET THIS IN HERE
@@ -350,22 +326,15 @@ if (slip !=0.0 && slip !=-1.0 && slip !=1.0 && fabs(cmd[0])>0.2) //&& cmd_vel ==
         PublishStatesSlip(slip_cn_, slip_pub_);
         return;
 }
-
-
 // PSEUDO MEASUREMENT UPDATES
 void CoreNav::NonHolonomic(const CoreNav::Vector3 vel, const CoreNav::Vector3 att, const CoreNav::Vector3 llh, CoreNav::Vector15 error_states, Eigen::MatrixXd P, CoreNav::Vector3 omega_b_ib){
 
         countNonHolo++;
-        // ROS_INFO_STREAM("countNonHolo" << countNonHolo);
         CoreNav::Matrix3 Cnb = CoreNav::eul_to_dcm(att[0],att[1],att[2]);
-        // ROS_INFO_STREAM("Cnb:\n" << Cnb);
         CoreNav::Vector3 lf2b(0.0, 0.0, 0.272);
-        // CoreNav::Vector3 lf2b(0.35, 0.0, 0.272);
 
         z_holo.row(0) = -eye3.row(1)*(Cnb*vel-CoreNav::skew_symm(omega_b_ib)*lf2b); //z31
-        // ROS_INFO_STREAM("z_holo.row(0)\n" << z_holo.row(0));
         z_holo.row(1) = -eye3.row(2)*(Cnb*vel-CoreNav::skew_symm(omega_b_ib)*lf2b); //z41
-        // ROS_INFO_STREAM("z_holo.row(1)\n" << z_holo.row(1));
         H_holo.row(0) << zeros3.row(0), -eye3.row(1)*Cnb, zeros3.row(0), zeros3.row(0), zeros3.row(0); //h32
         H_holo.row(1) << zeros3.row(0), -eye3.row(2)*Cnb, zeros3.row(0), zeros3.row(0), zeros3.row(0); //h42
 
@@ -384,7 +353,6 @@ void CoreNav::NonHolonomic(const CoreNav::Vector3 vel, const CoreNav::Vector3 at
            ins_pos_ = llh - error_states_.segment(6,3);
            error_states_.segment(0,9)<<Eigen::VectorXd::Zero(9);
            P_=(Eigen::MatrixXd::Identity(15,15) - K_holoS * H_holoS) * P* ( Eigen::MatrixXd::Identity(15,15) - K_holoS * H_holoS).transpose() + K_holoS * R_holoS * K_holoS.transpose();
-          // ROS_INFO("yaw is big");
         }
         else {
           K_holo = P * H_holo.transpose() * (H_holo * P * H_holo.transpose() + R_holo).inverse();
@@ -400,7 +368,6 @@ void CoreNav::NonHolonomic(const CoreNav::Vector3 vel, const CoreNav::Vector3 at
 }
 void CoreNav::zeroUpdate(const CoreNav::Vector3 vel, const CoreNav::Vector3 att, const CoreNav::Vector3 llh, CoreNav::Vector15 error_states, Eigen::MatrixXd P, const CoreNav::Vector3 omega_b_ib){
         countZero++;
-        // ROS_INFO_STREAM("countZero: "<<countZero);
         CoreNav::Matrix3 Cnb = CoreNav::eul_to_dcm(att[0],att[1],att[2]);
         CoreNav::Vector3 z_zaru;
         CoreNav::Vector3 z_zupt;
@@ -409,20 +376,12 @@ void CoreNav::zeroUpdate(const CoreNav::Vector3 vel, const CoreNav::Vector3 att,
         CoreNav::Vector6 z_zero;
         z_zero.segment(0,3) <<z_zaru;
         z_zero.segment(3,3) <<z_zupt;
-
-        // std::cout << "zaru " << z_zaru<<'\n';
-        // std::cout << "zupt " << z_zupt<<'\n';
-        // std::cout << "zero " << z_zero<<'\n';
         K_zero = P * H_zero.transpose() * (H_zero * P * H_zero.transpose() + R_zero).inverse();
-        // K_zaru = P * H_zaru.transpose() * (H_zaru * P * H_zaru.transpose() + R_zaru).inverse();
-        // error_states_ = error_states + K_zaru * (z_zaru  - H_zaru * error_states);
         error_states_ = error_states + K_zero * (z_zero  - (H_zero * error_states));
-
         ins_att_ = CoreNav::dcm_to_eul((Eigen::MatrixXd::Identity(3,3)- CoreNav::skew_symm(error_states_.segment(0,3)))*Cnb.transpose());
         ins_vel_ = vel - error_states_.segment(3,3);
         ins_pos_ = llh - error_states_.segment(6,3);
         error_states_.segment(0,9)<<Eigen::VectorXd::Zero(9);
-        // P_=(Eigen::MatrixXd::Identity(15,15) - K_zaru * H_zaru) * P * ( Eigen::MatrixXd::Identity(15,15) - K_zaru * H_zaru ).transpose() + K_zaru * R_zaru * K_zaru.transpose();
         P_=(Eigen::MatrixXd::Identity(15,15) - K_zero * H_zero) * P * ( Eigen::MatrixXd::Identity(15,15) - K_zero * H_zero ).transpose() + K_zero * R_zero * K_zero.transpose();
 
         return;
@@ -433,7 +392,6 @@ CoreNav::Matrix CoreNav::insErrorStateModel_LNF(double R_EPlus, double R_N, Core
         double rGeoCent  = pow(( pow(INS::Ro,2.0) /( 1.0 + (1.0/(pow(( 1.0 - INS::flat ),2.0)) - 1.0)*pow(sin(geoLat),2.0))),(1.0/2.0));
         double g0 = 9.780318*( 1.0 + (5.3024e-3)*pow(sin(insLLH(0)),2.0) - (5.9e-6)*pow(sin(2*insLLH(0)),2.0) );
         countStateModel++;
-        // ROS_INFO_STREAM("countStateModel: "<< countStateModel);
         CoreNav::Matrix3 F11;
         F11= (-1)*CoreNav::skew_symm(omega_n_in);
 
@@ -479,7 +437,6 @@ CoreNav::Matrix CoreNav::insErrorStateModel_LNF(double R_EPlus, double R_N, Core
         Eigen::Matrix3d PHI32 = F32*dt;
         Eigen::Matrix3d PHI33 = Eigen::Matrix3d::Identity()+F33*dt;
 
-//%Eq:14.72
         CoreNav::Matrix STM(15,15);
 
         STM<<PHI11, PHI12, PHI13, Eigen::Matrix3d::Zero(3,3),PHI15,
@@ -493,7 +450,6 @@ CoreNav::Matrix CoreNav::insErrorStateModel_LNF(double R_EPlus, double R_N, Core
 CoreNav::Matrix CoreNav::calc_Q(double R_N, double R_E, CoreNav::Vector3 insLLH, double dt, CoreNav::Matrix3 CbnPlus,CoreNav::Vector3 f_ib_b){
 
         countQcalc++;
-        // ROS_WARN_STREAM("countQcalc: "<< countQcalc);
         CoreNav::Matrix3 F21 = (-1.0)*CoreNav::skew_symm(CbnPlus*(f_ib_b));
         Eigen::Matrix3d T_rn_p;
         T_rn_p.row(0)<<1.0/(R_N+insLLH(2)),0.0,0.0;
@@ -551,7 +507,6 @@ CoreNav::Matrix CoreNav::calc_Q(double R_N, double R_E, CoreNav::Vector3 insLLH,
 // TOOLS
 CoreNav::Vector3 CoreNav::calc_gravity(const double latitude, const double height){
         countGravity++;
-        // ROS_INFO_STREAM("countGravity: " << countGravity);
         double e2=pow(INS::ecc,2.0);
         double den=1.0-e2*pow(sin(latitude),2.0);
         double Rm=INS::Ro*(1.0-e2)/pow(den,(3.0/2.0));
@@ -561,7 +516,6 @@ CoreNav::Vector3 CoreNav::calc_gravity(const double latitude, const double heigh
         double R_es_e=Top/Bottom;
         double RO=pow(Rp*Rm,(1.0/2.0));
         double g0=9.780318*(1.0+5.3024e-3*pow(sin(latitude),2.0)-5.9e-6*pow(sin(2*latitude),2.0));
-        // double gravity;
 
         if(height<0.0)
         {
@@ -613,7 +567,6 @@ CoreNav::Vector3 CoreNav::dcm_to_eul(CoreNav::Matrix3 dcm){
 CoreNav::Vector3 CoreNav::llh_to_enu(double lat, double lon, double height){
 
         countLLH2ENU++;
-        // ROS_INFO_STREAM("countLLH2ENU: " << countLLH2ENU);
         double phi = lat;
         double lambda = lon;
         double h = height;
@@ -674,41 +627,9 @@ CoreNav::Vector3 CoreNav::llh_to_xyz(double lat, double lon, double height){
         return ecef_xyz;
 
 }
-// CALLBACKS
-bool CoreNav::RegisterCallbacks(const ros::NodeHandle& n){
-        // Create a local nodehandle to manage callback subscriptions.
-        ros::NodeHandle nl(n);
-
-        position_pub_ = nl.advertise<geometry_msgs::PointStamped>( "position", 10, false);
-        velocity_pub_ = nl.advertise<geometry_msgs::PointStamped>( "velocity", 10, false);
-        attitude_pub_ = nl.advertise<geometry_msgs::PointStamped>( "attitude", 10, false);
-        ins_xyz_pub_=nl.advertise<geometry_msgs::PointStamped>( "ecef", 10, false);
-        pos_llh_pub_=nl.advertise<geometry_msgs::PointStamped>( "llh", 10, false);
-        enu_pub_ = nl.advertise<geometry_msgs::PointStamped>( "enu", 10, false);
-        cn_pub_=nl.advertise<nav_msgs::Odometry>("cn_odom", 10, false);
-        slip_pub_=nl.advertise<geometry_msgs::PointStamped>( "slip", 10, false);
-        gp_pub=nl.advertise<core_nav::GP_Input>("gp_input", 10, false);
-        // stop_cmd_pub_ = nl.advertise<std_msgs::Float64>("/core_nav/core_nav/stop_cmd", 1);
-
-
-        stop_sub_= nl.subscribe(stop_topic_, 1, &CoreNav::stopCallback, this);
-        imu_sub_ = nl.subscribe(imu_topic_,  1, &CoreNav::ImuCallback, this);
-        odo_sub_ = nl.subscribe(odo_topic_,  1, &CoreNav::OdoCallback, this);
-        joint_sub_ = nl.subscribe(joint_topic_,  1, &CoreNav::JointCallBack, this);
-        cmd_sub_ = nl.subscribe(cmd_topic_,  1, &CoreNav::CmdCallBack, this);
-        // encoderLeft_sub_ = nl.subscribe(encoderLeft_topic_,  1, &CoreNav::EncoderLeftCallBack, this);
-        // encoderRight_sub_ = nl.subscribe(encoderRight_topic_,  1, &CoreNav::EncoderRightCallBack, this);
-        // gp_sub_ =nl.subscribe(gp_topic_,1, &CoreNav::GPCallBack, this);
-
-        setStoppingService_ = nl.advertiseService("stopping_service",&CoreNav::setStopping_, this);
-
-        return true;
-}
-
-
-
+// SERVICES
 bool CoreNav::setStopping_(core_nav::SetStopping::Request &req, core_nav::SetStopping::Response &res){
-  ROS_DEBUG(" Message request!: %d", req.stopping);
+  ROS_DEBUG(" Service request: %d", req.stopping);
   flag_stopping = req.stopping;
 
   PosVec.x=savePos[0];
@@ -732,44 +653,55 @@ bool CoreNav::setStopping_(core_nav::SetStopping::Request &req, core_nav::SetSto
 
   return true;
 }
+// CALLBACKS
+bool CoreNav::RegisterCallbacks(const ros::NodeHandle& n){
+        // Create a local nodehandle to manage callback subscriptions.
+        ros::NodeHandle nl(n);
 
+        position_pub_ = nl.advertise<geometry_msgs::PointStamped>( "position", 10, false);
+        velocity_pub_ = nl.advertise<geometry_msgs::PointStamped>( "velocity", 10, false);
+        attitude_pub_ = nl.advertise<geometry_msgs::PointStamped>( "attitude", 10, false);
+        ins_xyz_pub_=nl.advertise<geometry_msgs::PointStamped>( "ecef", 10, false);
+        pos_llh_pub_=nl.advertise<geometry_msgs::PointStamped>( "llh", 10, false);
+        enu_pub_ = nl.advertise<geometry_msgs::PointStamped>( "enu", 10, false);
+        cn_pub_=nl.advertise<nav_msgs::Odometry>("cn_odom", 10, false);
+        slip_pub_=nl.advertise<geometry_msgs::PointStamped>( "slip", 10, false);
+        gp_pub=nl.advertise<core_nav::GP_Input>("gp_input", 10, false);
 
-// void stopCallback(const std_msgs::Float64::ConstPtr& msg);
+        stop_sub_= nl.subscribe(stop_topic_, 1, &CoreNav::stopCallback, this);
+        imu_sub_ = nl.subscribe(imu_topic_,  1, &CoreNav::ImuCallback, this);
+        odo_sub_ = nl.subscribe(odo_topic_,  1, &CoreNav::OdoCallback, this);
+        joint_sub_ = nl.subscribe(joint_topic_,  1, &CoreNav::JointCallBack, this);
+        cmd_sub_ = nl.subscribe(cmd_topic_,  1, &CoreNav::CmdCallBack, this);
+        // encoderLeft_sub_ = nl.subscribe(encoderLeft_topic_,  1, &CoreNav::EncoderLeftCallBack, this);
+        // encoderRight_sub_ = nl.subscribe(encoderRight_topic_,  1, &CoreNav::EncoderRightCallBack, this);
 
+        setStoppingService_ = nl.advertiseService("stopping_service",&CoreNav::setStopping_, this);
+
+        return true;
+}
 void CoreNav::OdoCallback(const OdoData& odo_data_){
 
         odo = getOdoData(odo_data_);
         has_odo_ = true; // ODOMETRY ON/OFF
         if (first_odo_ )
         {
-                // ROS_INFO("First Odometry\n");
                 odo_stamp_curr_ = (odo_data_.header.stamp).toSec();
                 first_odo_ = false;
         }
         else{
-
                 odo_stamp_prev_ = odo_stamp_curr_;
                 odo_stamp_curr_ = (odo_data_.header.stamp).toSec();
-                // update_flag = true;
-                // Update();
         }
-
-        // ROS_INFO("odo_stamp_curr_: %.12f",odo_stamp_curr_);
         return;
 }
 void CoreNav::JointCallBack(const JointData& joint_data_){
         joint = getJointData(joint_data_);
-
-        // ROS_INFO("Joints are called\n");
         has_joint_ = true;
         if (first_joint_)
         {
-                // ROS_INFO("First joint\n");
-                // joint_stamp_prev_ = (joint_data_.header.stamp).toSec();
-                // first_joint_ = false;
                 joint_stamp_curr_ = (joint_data_.header.stamp).toSec();
                 first_joint_ = false;
-                // first_odo_ = false;
         }
         else{
           joint_stamp_prev_ = joint_stamp_curr_;
@@ -777,13 +709,10 @@ void CoreNav::JointCallBack(const JointData& joint_data_){
           Update();
 
         }
-        //TODO joint stamp??? when is the prev is updated?
-        // joint_stamp_curr_ = (joint_data_.header.stamp).toSec();
         return;
 }
 void CoreNav::ImuCallback(const ImuData& imu_dataAdis_){
         imu = getImuData(imu_dataAdis_);
-        // count++;
         has_imu_ = true;
         if (first_imu_)
         {
@@ -793,15 +722,8 @@ void CoreNav::ImuCallback(const ImuData& imu_dataAdis_){
         else{
                 imu_stamp_prev_  = imu_stamp_curr_;
                 imu_stamp_curr_ = (imu_dataAdis_.header.stamp).toSec();
-
-                // propagate_flag = true;
-                // Propagate(imu,odo,cmd,encoderLeft,encoderRight,joint);
                 Propagate();
-                // propagate_flag = true;
-
         }
-        // ROS_INFO("imu_stamp_curr_: %.12f",imu_stamp_curr_);
-        // ROS_INFO("odo_stamp_prev_inIMU: %.12f",imu_stamp_prev_/imu_stamp_curr_);
         return;
 }
 void CoreNav::CmdCallBack(const CmdData& cmd_data_){
@@ -809,23 +731,11 @@ void CoreNav::CmdCallBack(const CmdData& cmd_data_){
         has_cmd_ = true;
         return;
 }
-
-
-// void CoreNav::GPCallBack(const core_nav::GP_Output::ConstPtr& gp_data_in_){
-//     this->gp_data_.mean = gp_data_in_->mean;
-//     this->gp_data_.sigma = gp_data_in_->sigma;
-//     new_gp_data_arrived_ = true;
-//     ROS_INFO("New GP data is available for %.2f seconds", gp_data_.mean.size()/10.0);
-//     gp_arrived_time_ = ros::Time::now().toSec();
-//
-// }
 void CoreNav::stopCallback(const std_msgs::Float64::ConstPtr& msg){
   this ->cmd_stop_=msg->data;
-  ROS_ERROR_STREAM("cmd_stop"<<cmd_stop_);
-  ROS_ERROR_STREAM("msg.data"<<msg->data);
+  ROS_ERROR_STREAM("Received Remaining Stop Time (sec): "<<cmd_stop_);
   new_stop_data_arrived_=true;
 }
-
 CoreNav::Vector13 CoreNav::getOdoData(const OdoData& odo_data_){
 
 CoreNav::Vector13 odoVec( (Vector(13) << odo_data_.pose.pose.position.x,
@@ -883,11 +793,6 @@ CoreNav::Vector CoreNav::getCmdData(const CmdData& cmd_data_){
         }
         return cmdVec;
 }
-// CoreNav::Vector CoreNav::getStopData(const StopData& stop_data_){
-//         CoreNav::Vector stopTime((Vector(1)<<stop_data_.data).finished());
-//       return stopTime;
-// }
-
 // PUBLISHERS
 void CoreNav::PublishStates(const CoreNav::Vector3& states,const ros::Publisher& pub){
         // // Check for subscribers before doing any work.
@@ -1073,21 +978,20 @@ bool CoreNav::Init(const ros::NodeHandle& n){
         0.0,0.0,0.05*0.05,0.0,
         0.0,0.0,0.0,0.05*0.05;
 
-        // R_<<R_1*R_2*R_1.transpose();
-        R_<<25*R_1*R_2*R_1.transpose(); // HERE
+        R_<<25*R_1*R_2*R_1.transpose();
 
         //GP R VALUES
-        R_IP<<R_;
-
-        R_IP_1 <<0.5,     0.5,    0.0, 0.0,
-                1/T_r_,-1/T_r_, 0.0, 0.0,
-                0.0,     0.0,     1.0, 0.0,
-                0.0,     0.0,     0.0, 1.0;
-
-        R_IP_2<< 0.03*0.03, 0.0,0.0,0.0,
-                 0.0, 0.03*0.03,0.0,0.0,
-                 0.0, 0.0, 0.05*0.05,0.0,
-                 0.0,0.0,0.0,0.05*0.05;
+        // R_IP<<R_;
+        //
+        // R_IP_1 <<0.5,     0.5,    0.0, 0.0,
+        //         1/T_r_,-1/T_r_, 0.0, 0.0,
+        //         0.0,     0.0,     1.0, 0.0,
+        //         0.0,     0.0,     0.0, 1.0;
+        //
+        // R_IP_2<< 0.03*0.03, 0.0,0.0,0.0,
+        //          0.0, 0.03*0.03,0.0,0.0,
+        //          0.0, 0.0, 0.05*0.05,0.0,
+        //          0.0,0.0,0.0,0.05*0.05;
 
         // R_zupt << std::pow(0.02,2),0,0,
         // 0,std::pow(0.02,2),0,
@@ -1105,9 +1009,7 @@ bool CoreNav::Init(const ros::NodeHandle& n){
                   0,0,0,0,std::pow(0.02,2),0,
                   0,0,0,0,0,std::pow(0.02,2);
 
-        // NON HOLONONOMIC R VALUES // HERE
-        // R_holo << 0.05,0,
-        //           0,0.1;
+        // NON HOLONONOMIC R VALUES
         R_holo << 0.05,0,
                   0,0.1;
 
@@ -1139,7 +1041,6 @@ bool CoreNav::Init(const ros::NodeHandle& n){
         ins_velMinus_ << init_vx, init_vy, init_vz;
         ins_posMinus_ << init_x, init_y, init_z;
         psiEst = init_yaw;
-        // ins_enu_ <<0.0,0.0,0.0;
         odomUptCount =0;
         startRecording=0;
         stopRecording=0;

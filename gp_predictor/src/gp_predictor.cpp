@@ -13,8 +13,6 @@ void GpPredictor::GPCallBack(const core_nav::GP_Output::ConstPtr& gp_data_in_){
     this->gp_data_.mean = gp_data_in_->mean;
     this->gp_data_.sigma = gp_data_in_->sigma;
 
-    std::cout << "size" << gp_data_.mean.size() <<'\n';
-
     ROS_INFO("New GP data is available for %.2f seconds", gp_data_.mean.size()/10.0);
     gp_arrived_time_ = ros::Time::now().toSec();
 
@@ -42,9 +40,9 @@ void GpPredictor::GPCallBack(const core_nav::GP_Output::ConstPtr& gp_data_in_){
       savePos[1]=srv_set_stopping.response.PosData.y;
       savePos[2]=srv_set_stopping.response.PosData.z;
 
-      ROS_INFO_STREAM("POS"<<savePos);
+      ROS_INFO_STREAM("Received LLH POS: "<<savePos);
 
-      ROS_INFO("GP data available!");
+      ROS_INFO("GP data available to use!");
       new_gp_data_arrived_ = true;
     }
     else
@@ -54,7 +52,7 @@ void GpPredictor::GPCallBack(const core_nav::GP_Output::ConstPtr& gp_data_in_){
 
     if(new_gp_data_arrived_) // This will happen after Gaussian Process publishes its results, check line 726. It initialized as false.
     {
-      ROS_INFO("NEW GP DATA ARRIVED!");
+      ROS_INFO("Starting stop prediction!");
 
         double cmd_stop_ = 0.0;
 
@@ -103,7 +101,6 @@ void GpPredictor::GPCallBack(const core_nav::GP_Output::ConstPtr& gp_data_in_){
               ROS_INFO("Stop command should be set at %u seconds after %.2f sec driving",i/10,odomUptCount/10.0);
               if (gp_arrived_time_ + i/10.0 - ros::Time::now().toSec()<0.0) // if the results from GP arrival time and the time for each odometry update sum is less then the current time stop immediately. This means delta time is negative--we needed to stop earlier.
               {
-              // if (gp_arrived_time_ + i/10.0 <0.0) {
                 stop_cmd_msg_.data = 0.5;
                 cmd_stop_=stop_cmd_msg_.data;
               }
@@ -124,11 +121,7 @@ void GpPredictor::GPCallBack(const core_nav::GP_Output::ConstPtr& gp_data_in_){
         new_gp_data_arrived_ = false; // Set the flag back to false, so that this does not happen again until new data comes in on the subscriber callback and sets this flag back to true
         i=0.0;
         slip_i=0.0;
-        // startRecording=stopRecording+ceil(cmd_stop_)*10+10+30; // Do we need a buffer time? Since we are stopping 3 seconds, and there could be some other time added to the process...idk...
-        // stopRecording=startRecording+150; //It should be 150...
-        // ROS_WARN("Start Next Recording at %.2f", startRecording/10);
-        // ROS_WARN("Stop Next Recording at %.2f", stopRecording/10);
-        // gp_flag =false; // DONT FORGET THIS IN HERE
+
     }
 
 }

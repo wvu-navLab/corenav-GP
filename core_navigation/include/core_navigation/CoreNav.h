@@ -32,9 +32,6 @@ public:
         typedef nav_msgs::Odometry OdoData;
         typedef sensor_msgs::JointState JointData;
         typedef geometry_msgs::Twist CmdData;
-        // typedef std_msgs::Float64 StopData;
-        // typedef hw_interface_plugin_roboteq::RoboteqData EncoderLeftData;
-        // typedef hw_interface_plugin_roboteq::RoboteqData EncoderRightData;
         typedef geometry_msgs::PoseStamped PoseData;
         typedef Eigen::VectorXd Vector;
         typedef Eigen::MatrixXd Matrix;
@@ -45,8 +42,8 @@ public:
         typedef Eigen::Matrix<double, 9, 1> Vector9;
         typedef Eigen::Matrix<double, 13, 1> Vector13;
         typedef Eigen::Matrix<double, 15, 1> Vector15;
-
         typedef Eigen::Matrix<double, 3, 3> Matrix3;
+
         Matrix3 CbnMinus;
         Matrix3 eye3=Eigen::Matrix3d::Identity();
         Matrix3 zeros3=Eigen::Matrix3d::Zero(3,3);
@@ -62,7 +59,7 @@ public:
         CoreNav();
         ~CoreNav();
 
-
+// Service
         bool setStopping_(core_nav::SetStopping::Request &req, core_nav::SetStopping::Response &res);
 
 // Calls LoadParameters and RegisterCallbacks. Fails on failure of either.
@@ -82,26 +79,20 @@ public:
         void OdoCallback(const OdoData& odo_data_);
         void JointCallBack(const JointData& joint_data_);
         void CmdCallBack(const CmdData& cmd_data_);
-        // void stopCallback(const StopData& stop_data_);
+
         // void EncoderLeftCallBack(const EncoderLeftData& encoderLeft_data_);
         // void EncoderRightCallBack(const EncoderRightData& encoderRight_data_);
 
-        void GPCallBack(const core_nav::GP_Output::ConstPtr& gp_data_in_);
+        // void GPCallBack(const core_nav::GP_Output::ConstPtr& gp_data_in_);
         // void CoreNav::GPCallBack(const core_nav::GP_Output::ConstPtr& gp_data_in_)
         void stopCallback(const std_msgs::Float64::ConstPtr& msg);
-        // ros::Subscriber sub = nh.subscribe("/core_nav/core_nav/stop_cmd", 1, stopCallback);
 
-        // void Update(const CoreNav::Vector13& odo,const CoreNav::Vector4& joint);
+
         void Update();
-        //void Propagate(const CoreNav::Vector6& imu, const CoreNav::Vector13& odo, const CoreNav::Vector3& cmd,const CoreNav::Vector2& encoderLeft,const CoreNav::Vector2& encoderRight,const CoreNav::Vector4& joint);
         void Propagate();
 //NonHolonomic constraint
-        // void NonHolonomic(const CoreNav::Vector6& imu,const CoreNav::Vector3 vel, const CoreNav::Vector3 att, const CoreNav::Vector3 llh, CoreNav::Vector15 errorStates, Eigen::MatrixXd P, CoreNav::Vector3 omega_b_ib);
         void NonHolonomic(const CoreNav::Vector3 vel, const CoreNav::Vector3 att, const CoreNav::Vector3 llh, CoreNav::Vector15 errorStates, Eigen::MatrixXd P, CoreNav::Vector3 omega_b_ib);
-//Zero vel update
-        // void zupt(const CoreNav::Vector3 vel, const CoreNav::Vector3 att, const CoreNav::Vector3 llh, CoreNav::Vector15 errorStates, Eigen::MatrixXd P);
-// Zero ang. update
-        // void zaru(const CoreNav::Vector3 vel, const CoreNav::Vector3 att, const CoreNav::Vector3 llh, CoreNav::Vector15 errorStates, Eigen::MatrixXd P, const CoreNav::Vector3 omega_b_ib);
+//Zero update
         void zeroUpdate(const CoreNav::Vector3 vel, const CoreNav::Vector3 att, const CoreNav::Vector3 llh, CoreNav::Vector15 errorStates, Eigen::MatrixXd P, const CoreNav::Vector3 omega_b_ib);
 
         CoreNav::Vector3 calc_gravity(const double latitude, const double height);
@@ -117,9 +108,6 @@ public:
         CoreNav::Vector6 getImuData(const ImuData& imu_data_);
         CoreNav::Vector4 getJointData(const JointData &joint_data_);
         CoreNav::Vector getCmdData(const CmdData &cmd_data_);
-        // std_msgs::Float64 getStopData(const StopData& stop_data_);
-        // CoreNav::Vector2 getEncoderLeftData(const EncoderLeftData &encoderLeft_data_);
-        // CoreNav::Vector2 getEncoderRightData(const EncoderRightData &encoderRight_data_);
         CoreNav::Vector13 getOdoData(const OdoData& odo_data_);
 
 
@@ -132,12 +120,12 @@ public:
         ros::Subscriber odo_sub_;
         ros::Subscriber joint_sub_;
         ros::Subscriber cmd_sub_;
-        ros::Subscriber encoderLeft_sub_;
-        ros::Subscriber encoderRight_sub_;
-        ros::Subscriber gp_sub_;
+        // ros::Subscriber encoderLeft_sub_;
+        // ros::Subscriber encoderRight_sub_;
+        // ros::Subscriber gp_sub_;
         ros::Subscriber stop_sub_;
 
-        bool new_stop_data_arrived_;
+
         double gp_arrived_time_;
 // Publisher.
         ros::Publisher position_pub_, velocity_pub_, attitude_pub_, enu_pub_,cn_pub_, slip_pub_, gp_pub, stop_cmd_pub_,pos_llh_pub_,ins_xyz_pub_;
@@ -155,6 +143,7 @@ public:
         std_msgs::Float64 stop_cmd_msg_;
         core_nav::GP_Input slip_msg;
         core_nav::GP_Output gp_data_;
+        bool new_stop_data_arrived_;
         bool has_odo_ = false;
         bool has_joint_ = false;
         bool has_cmd_ = false;
@@ -270,16 +259,12 @@ public:
         int countLLH2ENU=0;
         int incCounter_ = 0;
         // int odomUptCount=0;
-        double yawInc_ = 0;
-        int slip_i, i;
+        // double yawInc_ = 0;
+        int i;
         double xy_errSlip;
         double odomUptCount, startRecording, stopRecording, saveCountOdom;
         double delta_time_odometry_;
         double gravity;
-        // double Pvec[225];
-        // double Qvec[225];
-        // double STMvec[225];
-        // double Hvec[60];
         geometry_msgs::Point PosVec;
 
 };

@@ -70,6 +70,8 @@ joint:
     topic: /dead_reckoning/joint_states
 gp:
     topic: /core_nav/core_nav/gp_result
+stop:
+    topic: /core_nav/core_nav/stop_cmd
 
 frames:
   frame_id_out: map

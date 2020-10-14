@@ -318,85 +318,12 @@ if (slip !=0.0 && slip !=-1.0 && slip !=1.0 && fabs(cmd[0])>0.2) //&& cmd_vel ==
             slip_msg.time_array.clear();
     }
 
-    if(new_gp_data_arrived_) // This will happen after Gaussian Process publishes its results, check line 726. It initialized as false.
+    if(new_stop_data_arrived_)
     {
-      ROS_DEBUG("NEW GP DATA ARRIVED!");
+      ROS_DEBUG("NEW STOP DATA ARRIVED!");
 
-      double cmd_stop_ = 0.0;
-
-      // gp_predictor_service(STM_,P_pred,Q_,H_,savePos);
-      //line 1100 R_IP_1 should be defined in gp_predictor
-      //K_pred should be defined in gp_predictor
-
-        // for(int slip_i=0; slip_i<5*gp_data_.mean.size(); slip_i++) // HERE
-        // {
-        //     P_pred = STM_*P_pred*STM_.transpose() + Q_;
-        //     if ((slip_i % 5) ==0) //odomdata available //HERE
-        //     {
-        //     double chi0_slip=gp_data_.mean.at(i);
-        //     double chi1_slip=gp_data_.mean.at(i)+gp_data_.sigma.at(i);
-        //     double chi2_slip=gp_data_.mean.at(i)-gp_data_.sigma.at(i);
-        //
-        //     double chi0_odo=0.8/(1.0-chi0_slip);
-        //     double chi1_odo=0.8/(1.0-chi1_slip);
-        //     double chi2_odo=0.8/(1.0-chi2_slip);
-        //
-        //     double chi_UT_est=(chi0_odo+chi1_odo+chi2_odo)/3.0;
-        //     double chi_UT_est_cov=((chi0_odo-chi_UT_est)*(chi0_odo-chi_UT_est)+(chi1_odo-chi_UT_est)*(chi1_odo-chi_UT_est)+(chi2_odo-chi_UT_est)*(chi2_odo-chi_UT_est))/3.0;
-        //
-        //      R_IP_2<< std::max(0.03*0.03,chi_UT_est_cov*chi_UT_est_cov),0,0,0,
-        //               0,std::max(0.03*0.03,chi_UT_est_cov*chi_UT_est_cov),0,0,
-        //               0,0,std::max(0.05*0.05,chi_UT_est_cov*chi_UT_est_cov),0,
-        //               0,0,0,0.05*0.05;
-        //
-        //      R_IP=25*R_IP_1*R_IP_2*R_IP_1.transpose();
-        //      // R_IP=R_IP_1*R_IP_2*R_IP_1.transpose();
-        //
-        //
-        //     K_pred=P_pred*H_.transpose()*(H_*P_pred*H_.transpose() +R_IP).inverse();
-        //     P_pred=(Eigen::MatrixXd::Identity(15,15) - K_pred*H_)*P_pred*(Eigen::MatrixXd::Identity(15,15)-K_pred*H_).transpose()  + K_pred*R_IP*K_pred.transpose();
-        //     // std::cout << "i:" << i << '\n';
-        //     i++;
-        //     }
-        //
-        //     ins_enu_slip << CoreNav::llh_to_enu(savePos[0],savePos[1],savePos[2]);
-        //     ins_enu_slip_3p << CoreNav::llh_to_enu(savePos[0]-3.0*sqrt(std::abs(P_pred(6,6))),savePos[1]-3.0*sqrt(std::abs(P_pred(7,7))), savePos[2]-3.0*sqrt(std::abs(P_pred(8,8))));
-        //     ins_enu_slip3p << CoreNav::llh_to_enu(savePos[0]+3.0*sqrt(std::abs(P_pred(6,6))),savePos[1]+3.0*sqrt(std::abs(P_pred(7,7))), savePos[2]+3.0*sqrt(std::abs(P_pred(8,8))));
-        //
-        //     xy_errSlip = sqrt((ins_enu_slip3p(0)-ins_enu_slip(0))*(ins_enu_slip3p(0)-ins_enu_slip(0)) + (ins_enu_slip3p(1)-ins_enu_slip(1))*(ins_enu_slip3p(1)-ins_enu_slip(1)));
-        //     ROS_ERROR_THROTTLE(0.5,"XYerror %.6f meters", xy_errSlip);
-        //     // std::cout << "error" << '\n'<< xy_errSlip << '\n';
-        //
-        //     if (xy_errSlip > 2.00)
-        //     {
-        //
-        //       ROS_ERROR("Stop Command Required, error is more than %.2f meters", xy_errSlip);
-        //       ROS_ERROR("Stop command should be set at %u seconds after %.2f sec driving",i/10,odomUptCount/10.0);
-        //       if (gp_arrived_time_ + i/10.0 - ros::Time::now().toSec()<0.0) // if the results from GP arrival time and the time for each odometry update sum is less then the current time stop immediately. This means delta time is negative--we needed to stop earlier.
-        //       {
-        //       // if (gp_arrived_time_ + i/10.0 <0.0) {
-        //         stop_cmd_msg_.data = 0.5;
-        //         cmd_stop_=stop_cmd_msg_.data;
-        //       }
-        //       else //otherwise calculate the necessary time for stopping -- when do we need to stop from now.
-        //       {
-        //         stop_cmd_msg_.data = gp_arrived_time_ + i/10.0 - ros::Time::now().toSec();
-        //         // stop_cmd_msg_.data = gp_arrived_time_ + i/10.0 ;
-        //         cmd_stop_=stop_cmd_msg_.data;
-        //
-        //       }
-        //       stop_cmd_pub_.publish(stop_cmd_msg_); //publish the delta time required to stop.
-        //       ROS_DEBUG("Remaining Time to Stop = %.3f s", stop_cmd_msg_.data);
-        //
-        //       break; // then break the for loop.
-        //     }
-        //
-        // }
-
-        new_gp_data_arrived_ = false; // Set the flag back to false, so that this does not happen again until new data comes in on the subscriber callback and sets this flag back to true
-        i=0.0;
-        slip_i=0.0;
-        startRecording=stopRecording+ceil(cmd_stop_)*10+10+30; // Do we need a buffer time? Since we are stopping 3 seconds, and there could be some other time added to the process...idk...
+        new_stop_data_arrived_ = false; // Set the flag back to false, so that this does not happen again until new data comes in on the subscriber callback and sets this flag back to true
+        startRecording=stopRecording+ceil(cmd_stop_)*10+10+30;
         stopRecording=startRecording+150; //It should be 150...
         ROS_WARN("Start Next Recording at %.2f", startRecording/10);
         ROS_WARN("Stop Next Recording at %.2f", stopRecording/10);
@@ -423,6 +350,8 @@ if (slip !=0.0 && slip !=-1.0 && slip !=1.0 && fabs(cmd[0])>0.2) //&& cmd_vel ==
         PublishStatesSlip(slip_cn_, slip_pub_);
         return;
 }
+
+
 // PSEUDO MEASUREMENT UPDATES
 void CoreNav::NonHolonomic(const CoreNav::Vector3 vel, const CoreNav::Vector3 att, const CoreNav::Vector3 llh, CoreNav::Vector15 error_states, Eigen::MatrixXd P, CoreNav::Vector3 omega_b_ib){
 
@@ -759,28 +688,29 @@ bool CoreNav::RegisterCallbacks(const ros::NodeHandle& n){
         cn_pub_=nl.advertise<nav_msgs::Odometry>("cn_odom", 10, false);
         slip_pub_=nl.advertise<geometry_msgs::PointStamped>( "slip", 10, false);
         gp_pub=nl.advertise<core_nav::GP_Input>("gp_input", 10, false);
-        stop_cmd_pub_ = nl.advertise<std_msgs::Float64>("/core_nav/core_nav/stop_cmd", 1);
+        // stop_cmd_pub_ = nl.advertise<std_msgs::Float64>("/core_nav/core_nav/stop_cmd", 1);
 
+
+        stop_sub_= nl.subscribe(stop_topic_, 1, &CoreNav::stopCallback, this);
         imu_sub_ = nl.subscribe(imu_topic_,  1, &CoreNav::ImuCallback, this);
         odo_sub_ = nl.subscribe(odo_topic_,  1, &CoreNav::OdoCallback, this);
         joint_sub_ = nl.subscribe(joint_topic_,  1, &CoreNav::JointCallBack, this);
         cmd_sub_ = nl.subscribe(cmd_topic_,  1, &CoreNav::CmdCallBack, this);
         // encoderLeft_sub_ = nl.subscribe(encoderLeft_topic_,  1, &CoreNav::EncoderLeftCallBack, this);
         // encoderRight_sub_ = nl.subscribe(encoderRight_topic_,  1, &CoreNav::EncoderRightCallBack, this);
-        gp_sub_ =nl.subscribe(gp_topic_,1, &CoreNav::GPCallBack, this);
+        // gp_sub_ =nl.subscribe(gp_topic_,1, &CoreNav::GPCallBack, this);
 
         setStoppingService_ = nl.advertiseService("stopping_service",&CoreNav::setStopping_, this);
 
         return true;
 }
 
+
+
 bool CoreNav::setStopping_(core_nav::SetStopping::Request &req, core_nav::SetStopping::Response &res){
-  ROS_DEBUG(" GOT SOME MESSAGE: %d", req.stopping);
+  ROS_DEBUG(" Message request!: %d", req.stopping);
   flag_stopping = req.stopping;
-  // for (int i=0; i<225; i++)
-  // {
-  //   res.PvecData[i] =  Pvec[i];
-  // }
+
   PosVec.x=savePos[0];
   PosVec.y=savePos[1];
   PosVec.z=savePos[2];
@@ -799,22 +729,12 @@ bool CoreNav::setStopping_(core_nav::SetStopping::Request &req, core_nav::SetSto
       res.HvecData[row1*4+col1]=H_(row1,col1);
     }
   }
-  // res.PvecData.data() <<  Pvec;
-  // res.QvecData.data() <<  Qvec;
-  // res.STMvecData.data() <<  STMvec;
-
-  // float Pvecfloat[225];
-  // float Qvecfloat[225];
-  // float STMvecfloat[225];
-  // std::copy(Pvec,Pvec+225, Pvecfloat);
-  // std::copy(Qvec, Qvecfloat);
-  // std::copy(STMvec, STMvecfloat);
-
-  // res.Qvec = Qvecfloat;
-  // res.STMvec = STMvecfloat;
 
   return true;
 }
+
+
+// void stopCallback(const std_msgs::Float64::ConstPtr& msg);
 
 void CoreNav::OdoCallback(const OdoData& odo_data_){
 
@@ -889,14 +809,23 @@ void CoreNav::CmdCallBack(const CmdData& cmd_data_){
         has_cmd_ = true;
         return;
 }
-void CoreNav::GPCallBack(const core_nav::GP_Output::ConstPtr& gp_data_in_){
-    this->gp_data_.mean = gp_data_in_->mean;
-    this->gp_data_.sigma = gp_data_in_->sigma;
-    new_gp_data_arrived_ = true;
-    ROS_INFO("New GP data is available for %.2f seconds", gp_data_.mean.size()/10.0);
-    gp_arrived_time_ = ros::Time::now().toSec();
 
+
+// void CoreNav::GPCallBack(const core_nav::GP_Output::ConstPtr& gp_data_in_){
+//     this->gp_data_.mean = gp_data_in_->mean;
+//     this->gp_data_.sigma = gp_data_in_->sigma;
+//     new_gp_data_arrived_ = true;
+//     ROS_INFO("New GP data is available for %.2f seconds", gp_data_.mean.size()/10.0);
+//     gp_arrived_time_ = ros::Time::now().toSec();
+//
+// }
+void CoreNav::stopCallback(const std_msgs::Float64::ConstPtr& msg){
+  this ->cmd_stop_=msg->data;
+  ROS_ERROR_STREAM("cmd_stop"<<cmd_stop_);
+  ROS_ERROR_STREAM("msg.data"<<msg->data);
+  new_stop_data_arrived_=true;
 }
+
 CoreNav::Vector13 CoreNav::getOdoData(const OdoData& odo_data_){
 
 CoreNav::Vector13 odoVec( (Vector(13) << odo_data_.pose.pose.position.x,
@@ -954,6 +883,10 @@ CoreNav::Vector CoreNav::getCmdData(const CmdData& cmd_data_){
         }
         return cmdVec;
 }
+// CoreNav::Vector CoreNav::getStopData(const StopData& stop_data_){
+//         CoreNav::Vector stopTime((Vector(1)<<stop_data_.data).finished());
+//       return stopTime;
+// }
 
 // PUBLISHERS
 void CoreNav::PublishStates(const CoreNav::Vector3& states,const ros::Publisher& pub){
@@ -1028,6 +961,7 @@ bool CoreNav::LoadParameters(const ros::NodeHandle& n){
         if(!pu::Get("odo/topic", odo_topic_)) return false;
         if(!pu::Get("joint/topic", joint_topic_)) return false;
         if(!pu::Get("cmd/topic", cmd_topic_)) return false;
+        if(!pu::Get("stop/topic", stop_topic_)) return false;
         if(!pu::Get("encoderLeft/topic", encoderLeft_topic_)) return false;
         if(!pu::Get("encoderRight/topic", encoderLeft_topic_)) return false;
         if(!pu::Get("gp/topic", gp_topic_)) return false;
@@ -1104,7 +1038,7 @@ bool CoreNav::Initialize(const ros::NodeHandle& n){
                 ROS_ERROR("%s: Failed to register callbacks.", name_.c_str());
                 return false;
         }
-        new_gp_data_arrived_ = false;
+        new_stop_data_arrived_ = false;
 
         return true;
 }

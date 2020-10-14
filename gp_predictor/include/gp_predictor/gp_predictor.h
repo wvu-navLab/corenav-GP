@@ -18,6 +18,7 @@
 class GpPredictor
 {
 public:
+
   GpPredictor(ros::NodeHandle &);
   void mobility(bool flag);
   void mobilityCallback(const std_msgs::Int64::ConstPtr& msg);
@@ -30,13 +31,20 @@ public:
   bool new_gp_data_arrived_;
   double gp_arrived_time_;
   typedef Eigen::MatrixXd Matrix;
-  GpPredictor::Matrix P_pred, STM_, Q_;
-  int slip_i, i;
+  // GpPredictor::Matrix P_pred, STM_, Q_;
+  int slip_i=0;
+  int i=0;;
   Eigen::Matrix<double, 4, 4> R_IP;
   Eigen::Matrix<double, 4, 4> R_IP_1;
   Eigen::Matrix<double, 4, 4> R_IP_2;
   Eigen::Matrix<double, 15, 4> K_pred;
   Eigen::Matrix<double, 4, 15> H_;
+  Eigen::Matrix<double, 15, 15> P_pred;
+  Eigen::Matrix<double, 15, 15> STM_;
+  Eigen::Matrix<double, 15, 15> Q_;
+
+
+
   GpPredictor::Vector3 savePos, ins_enu_slip, ins_enu_slip3p, ins_enu_slip_3p;
   double xy_errSlip,odomUptCount, startRecording, stopRecording, saveCountOdom;
   std_msgs::Float64 stop_cmd_msg_;

@@ -32,6 +32,7 @@ public:
         typedef nav_msgs::Odometry OdoData;
         typedef sensor_msgs::JointState JointData;
         typedef geometry_msgs::Twist CmdData;
+        // typedef std_msgs::Float64 StopData;
         // typedef hw_interface_plugin_roboteq::RoboteqData EncoderLeftData;
         // typedef hw_interface_plugin_roboteq::RoboteqData EncoderRightData;
         typedef geometry_msgs::PoseStamped PoseData;
@@ -56,6 +57,7 @@ public:
         CoreNav::Vector3 cmd;
         CoreNav::Vector2 encoderLeft;
         CoreNav::Vector2 encoderRight;
+        CoreNav::Vector cmd_stop;
 
         CoreNav();
         ~CoreNav();
@@ -80,10 +82,14 @@ public:
         void OdoCallback(const OdoData& odo_data_);
         void JointCallBack(const JointData& joint_data_);
         void CmdCallBack(const CmdData& cmd_data_);
+        // void stopCallback(const StopData& stop_data_);
         // void EncoderLeftCallBack(const EncoderLeftData& encoderLeft_data_);
         // void EncoderRightCallBack(const EncoderRightData& encoderRight_data_);
 
         void GPCallBack(const core_nav::GP_Output::ConstPtr& gp_data_in_);
+        // void CoreNav::GPCallBack(const core_nav::GP_Output::ConstPtr& gp_data_in_)
+        void stopCallback(const std_msgs::Float64::ConstPtr& msg);
+        // ros::Subscriber sub = nh.subscribe("/core_nav/core_nav/stop_cmd", 1, stopCallback);
 
         // void Update(const CoreNav::Vector13& odo,const CoreNav::Vector4& joint);
         void Update();
@@ -111,9 +117,12 @@ public:
         CoreNav::Vector6 getImuData(const ImuData& imu_data_);
         CoreNav::Vector4 getJointData(const JointData &joint_data_);
         CoreNav::Vector getCmdData(const CmdData &cmd_data_);
+        // std_msgs::Float64 getStopData(const StopData& stop_data_);
         // CoreNav::Vector2 getEncoderLeftData(const EncoderLeftData &encoderLeft_data_);
         // CoreNav::Vector2 getEncoderRightData(const EncoderRightData &encoderRight_data_);
         CoreNav::Vector13 getOdoData(const OdoData& odo_data_);
+
+
 
 // The node's name.
         std::string name_;
@@ -126,7 +135,9 @@ public:
         ros::Subscriber encoderLeft_sub_;
         ros::Subscriber encoderRight_sub_;
         ros::Subscriber gp_sub_;
-        bool new_gp_data_arrived_;
+        ros::Subscriber stop_sub_;
+
+        bool new_stop_data_arrived_;
         double gp_arrived_time_;
 // Publisher.
         ros::Publisher position_pub_, velocity_pub_, attitude_pub_, enu_pub_,cn_pub_, slip_pub_, gp_pub, stop_cmd_pub_,pos_llh_pub_,ins_xyz_pub_;
@@ -137,6 +148,8 @@ public:
         ImuData imu_data_;
         JointData joint_data_;
         CmdData cmd_data_;
+        // StopData stop_data_;
+
         // EncoderLeftData encoderLeft_data_;
         // EncoderRightData encoderRight_data_;
         std_msgs::Float64 stop_cmd_msg_;
@@ -177,7 +190,9 @@ public:
         std::string cmd_topic_;
         std::string encoderLeft_topic_;
         std::string encoderRight_topic_;
-        std::string gp_topic_; // CAGRI: this is fine, you just need to set it with a param, like you do with the rest of these. It isn't being set to anything yet in the .cpp file
+        std::string gp_topic_;
+        std::string stop_topic_;
+        // CAGRI: this is fine, you just need to set it with a param, like you do with the rest of these. It isn't being set to anything yet in the .cpp file
 // For initialization.
         bool initialized_;
 
@@ -220,7 +235,7 @@ public:
         CoreNav::Vector3 H11_, H12_, H21_, H31_, H32_, H24_, H41_, H42_;
         double z11_, z21_, z31_, z41_;
         double rearVel_, headRate_, T_r_, s_or_, s_delta_or_,velFrontLeft_,velFrontRight_,velBackLeft_,velBackRight_;
-
+        double cmd_stop_;
         CoreNav::Vector3 omega_b_ib_, omega_b_ib_prev_, omega_n_ie_;
         CoreNav::Vector3 f_ib_b_, f_ib_b_prev_, omega_n_en_, omega_n_in_, grav_;
         CoreNav::Matrix3 Omega_b_ib_, Omega_n_ie_, Omega_n_en_;

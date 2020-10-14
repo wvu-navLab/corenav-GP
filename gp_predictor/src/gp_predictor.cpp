@@ -3,33 +3,27 @@
 
 GpPredictor::GpPredictor(ros::NodeHandle &nh) :nh_(nh)
 {
-
-
-  // mobility_sub = nh_.subscribe("/state_machine/mobility_scout", 1, &GpPredictor::mobilityCallback, this);
   gp_sub_ =nh.subscribe("/core_nav/core_nav/gp_result",1, &GpPredictor::GPCallBack, this);
   clt_setStopping_ =nh_.serviceClient<core_nav::SetStopping>("/core_nav/core_nav/stopping_service");
   stop_cmd_pub_ = nh.advertise<std_msgs::Float64>("/core_nav/core_nav/stop_cmd", 1);
-
 }
 
 
 void GpPredictor::GPCallBack(const core_nav::GP_Output::ConstPtr& gp_data_in_){
     this->gp_data_.mean = gp_data_in_->mean;
     this->gp_data_.sigma = gp_data_in_->sigma;
-    new_gp_data_arrived_ = true;
+
+    std::cout << "size" << gp_data_.mean.size() <<'\n';
+
     ROS_INFO("New GP data is available for %.2f seconds", gp_data_.mean.size()/10.0);
     gp_arrived_time_ = ros::Time::now().toSec();
 
     core_nav::SetStopping srv_set_stopping;
-    srv_set_stopping.request.stopping  = new_gp_data_arrived_;
+    srv_set_stopping.request.stopping  = true;
     if (clt_setStopping_.call(srv_set_stopping))
     {
+      ROS_INFO("Called Stopping Service");
 
-      savePos[0]=srv_set_stopping.response.PosData.x;
-      savePos[1]=srv_set_stopping.response.PosData.y;
-      savePos[2]=srv_set_stopping.response.PosData.z;
-
-      // res.PosData=PosVec;
       for (int row=0; row<15; row++){
         for (int col=0; col<15; col++){
           P_pred(row,col)=srv_set_stopping.response.PvecData[row*15+col];
@@ -38,24 +32,31 @@ void GpPredictor::GPCallBack(const core_nav::GP_Output::ConstPtr& gp_data_in_){
         }
       }
 
-
       for (int row1=0; row1<4; row1++){
         for (int col1=0; col1<15; col1++){
           H_(row1,col1)=srv_set_stopping.response.HvecData[row1*4+col1];
         }
       }
 
+      savePos[0]=srv_set_stopping.response.PosData.x;
+      savePos[1]=srv_set_stopping.response.PosData.y;
+      savePos[2]=srv_set_stopping.response.PosData.z;
+
+      ROS_INFO_STREAM("POS"<<savePos);
+
+      ROS_INFO("GP data available!");
+      new_gp_data_arrived_ = true;
     }
     else
     {
-      ROS_ERROR(" Failed to call mobility service");
+      ROS_INFO(" Failed to call service");
     }
 
     if(new_gp_data_arrived_) // This will happen after Gaussian Process publishes its results, check line 726. It initialized as false.
     {
-      ROS_DEBUG("NEW GP DATA ARRIVED!");
+      ROS_INFO("NEW GP DATA ARRIVED!");
 
-      double cmd_stop_ = 0.0;
+        double cmd_stop_ = 0.0;
 
         for(int slip_i=0; slip_i<5*gp_data_.mean.size(); slip_i++) // HERE
         {
@@ -77,14 +78,14 @@ void GpPredictor::GPCallBack(const core_nav::GP_Output::ConstPtr& gp_data_in_){
                       0,std::max(0.03*0.03,chi_UT_est_cov*chi_UT_est_cov),0,0,
                       0,0,std::max(0.05*0.05,chi_UT_est_cov*chi_UT_est_cov),0,
                       0,0,0,0.05*0.05;
-
+             R_IP_1 <<0.5,     0.5,     0.0, 0.0,
+                      1/0.685,-1/0.685,   0.0, 0.0,
+                      0.0,     0.0,     1.0, 0.0,
+                      0.0,     0.0,     0.0, 1.0;
              R_IP=25*R_IP_1*R_IP_2*R_IP_1.transpose();
-             // R_IP=R_IP_1*R_IP_2*R_IP_1.transpose();
-
 
             K_pred=P_pred*H_.transpose()*(H_*P_pred*H_.transpose() +R_IP).inverse();
             P_pred=(Eigen::MatrixXd::Identity(15,15) - K_pred*H_)*P_pred*(Eigen::MatrixXd::Identity(15,15)-K_pred*H_).transpose()  + K_pred*R_IP*K_pred.transpose();
-            // std::cout << "i:" << i << '\n';
             i++;
             }
 
@@ -94,13 +95,12 @@ void GpPredictor::GPCallBack(const core_nav::GP_Output::ConstPtr& gp_data_in_){
 
             xy_errSlip = sqrt((ins_enu_slip3p(0)-ins_enu_slip(0))*(ins_enu_slip3p(0)-ins_enu_slip(0)) + (ins_enu_slip3p(1)-ins_enu_slip(1))*(ins_enu_slip3p(1)-ins_enu_slip(1)));
             ROS_ERROR_THROTTLE(0.5,"XYerror %.6f meters", xy_errSlip);
-            // std::cout << "error" << '\n'<< xy_errSlip << '\n';
 
             if (xy_errSlip > 2.00)
             {
 
-              ROS_ERROR("Stop Command Required, error is more than %.2f meters", xy_errSlip);
-              ROS_ERROR("Stop command should be set at %u seconds after %.2f sec driving",i/10,odomUptCount/10.0);
+              ROS_INFO("Stop Command Required, error is more than %.2f meters", xy_errSlip);
+              ROS_INFO("Stop command should be set at %u seconds after %.2f sec driving",i/10,odomUptCount/10.0);
               if (gp_arrived_time_ + i/10.0 - ros::Time::now().toSec()<0.0) // if the results from GP arrival time and the time for each odometry update sum is less then the current time stop immediately. This means delta time is negative--we needed to stop earlier.
               {
               // if (gp_arrived_time_ + i/10.0 <0.0) {
@@ -110,12 +110,11 @@ void GpPredictor::GPCallBack(const core_nav::GP_Output::ConstPtr& gp_data_in_){
               else //otherwise calculate the necessary time for stopping -- when do we need to stop from now.
               {
                 stop_cmd_msg_.data = gp_arrived_time_ + i/10.0 - ros::Time::now().toSec();
-                // stop_cmd_msg_.data = gp_arrived_time_ + i/10.0 ;
                 cmd_stop_=stop_cmd_msg_.data;
 
               }
               stop_cmd_pub_.publish(stop_cmd_msg_); //publish the delta time required to stop.
-              ROS_DEBUG("Remaining Time to Stop = %.3f s", stop_cmd_msg_.data);
+              ROS_INFO("Remaining Time to Stop = %.3f s", stop_cmd_msg_.data);
 
               break; // then break the for loop.
             }
@@ -125,11 +124,11 @@ void GpPredictor::GPCallBack(const core_nav::GP_Output::ConstPtr& gp_data_in_){
         new_gp_data_arrived_ = false; // Set the flag back to false, so that this does not happen again until new data comes in on the subscriber callback and sets this flag back to true
         i=0.0;
         slip_i=0.0;
-        startRecording=stopRecording+ceil(cmd_stop_)*10+10+30; // Do we need a buffer time? Since we are stopping 3 seconds, and there could be some other time added to the process...idk...
-        stopRecording=startRecording+150; //It should be 150...
-        ROS_WARN("Start Next Recording at %.2f", startRecording/10);
-        ROS_WARN("Stop Next Recording at %.2f", stopRecording/10);
-        gp_flag =false; // DONT FORGET THIS IN HERE
+        // startRecording=stopRecording+ceil(cmd_stop_)*10+10+30; // Do we need a buffer time? Since we are stopping 3 seconds, and there could be some other time added to the process...idk...
+        // stopRecording=startRecording+150; //It should be 150...
+        // ROS_WARN("Start Next Recording at %.2f", startRecording/10);
+        // ROS_WARN("Stop Next Recording at %.2f", stopRecording/10);
+        // gp_flag =false; // DONT FORGET THIS IN HERE
     }
 
 }

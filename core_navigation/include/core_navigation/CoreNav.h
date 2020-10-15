@@ -109,7 +109,7 @@ public:
         void EncoderLeftCallBack(const EncoderLeftData& encoderLeft_data_);
         void EncoderRightCallBack(const EncoderRightData& encoderRight_data_);
 
-        void GPCallBack(const core_nav::GP_Output::ConstPtr& gp_data_in_);
+        // void GPCallBack(const core_nav::GP_Output::ConstPtr& gp_data_in_);
 
         double derivcost(double, double);
         void normalUpdate(Eigen::RowVectorXd res);
@@ -120,14 +120,12 @@ public:
         void orkf5Update(Eigen::RowVectorXd res);
         void orkf4Update(Eigen::RowVectorXd res);
 
-        void Update(const CoreNav::Vector13& odo,const CoreNav::Vector4& joint);
-        void Propagate(const CoreNav::Vector6& imu, const CoreNav::Vector13& odo, const CoreNav::Vector3& cmd,const CoreNav::Vector2& encoderLeft,const CoreNav::Vector2& encoderRight,const CoreNav::Vector4& joint);
+        void Update();
+        void Propagate();
 //NonHolonomic constraint
-        void NonHolonomic(const CoreNav::Vector6& imu,const CoreNav::Vector3 vel, const CoreNav::Vector3 att, const CoreNav::Vector3 llh, CoreNav::Vector15 errorStates, Eigen::MatrixXd P, CoreNav::Vector3 omega_b_ib);
-//Zero vel update
-        void zupt(const CoreNav::Vector3 vel, const CoreNav::Vector3 att, const CoreNav::Vector3 llh, CoreNav::Vector15 errorStates, Eigen::MatrixXd P);
-// Zero ang. update
-        void zaru(const CoreNav::Vector3 vel, const CoreNav::Vector3 att, const CoreNav::Vector3 llh, CoreNav::Vector15 errorStates, Eigen::MatrixXd P, const CoreNav::Vector3 omega_b_ib);
+        void NonHolonomic(const CoreNav::Vector3 vel, const CoreNav::Vector3 att, const CoreNav::Vector3 llh, CoreNav::Vector15 errorStates, Eigen::MatrixXd P, CoreNav::Vector3 omega_b_ib);
+        //Zero update
+        void zeroUpdate(const CoreNav::Vector3 vel, const CoreNav::Vector3 att, const CoreNav::Vector3 llh, CoreNav::Vector15 errorStates, Eigen::MatrixXd P, const CoreNav::Vector3 omega_b_ib);
 
         CoreNav::Vector3 calc_gravity(const double latitude, const double height);
         CoreNav::Matrix3 skew_symm(const CoreNav::Vector3 vec);
@@ -226,6 +224,7 @@ public:
         Eigen::Matrix<double, 4, 4> R_2;
         Eigen::Matrix<double, 3, 3> R_zupt;
         Eigen::Matrix<double, 3, 3> R_zaru;
+        Eigen::Matrix<double, 6, 6> R_zero;
         Eigen::Matrix<double, 4, 4> R_IP;
         Eigen::Matrix<double, 4, 4> R_IP_1;
         Eigen::Matrix<double, 4, 4> R_IP_2;
@@ -235,11 +234,13 @@ public:
         Eigen::Matrix<double, 15, 4> K_pred;
         Eigen::Matrix<double, 15, 3> K_zupt;
         Eigen::Matrix<double, 15, 3> K_zaru;
+        Eigen::Matrix<double, 15, 6> K_zero;
         Eigen::Matrix<double, 15, 2> K_holo;
         Eigen::Matrix<double, 15, 1> K_holoS;
         Eigen::Matrix<double, 4, 15> H_;
         Eigen::Matrix<double, 3, 15> H_zupt;
         Eigen::Matrix<double, 3, 15> H_zaru;
+        Eigen::Matrix<double, 6, 15> H_zero;
         Eigen::Matrix<double, 2, 15> H_holo;
         Eigen::Matrix<double, 1, 15> H_holoS;
         Eigen::Matrix<double, 2, 1> z_holo;
@@ -275,6 +276,7 @@ public:
         double dt_odo_, dt_imu_;
         int count=0;
         int slip_i, i;
+        int countZero=0;
         double xy_errSlip;
         double odomUptCount, startRecording, stopRecording, saveCountOdom;
         ICEclass iceclass;

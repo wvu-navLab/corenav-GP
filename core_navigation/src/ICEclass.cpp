@@ -28,7 +28,7 @@ ICEclass::ICEclass(){          // residuals in corenav are 4 dimensional
     num_obs.push_back(0);
   };
 
-  residuals.setZero(300,4);
+  residuals.setZero(500,4);
 
   // How to initialize the globalMixtureModel ?
 
@@ -163,7 +163,7 @@ void ICEclass::merging(Eigen::RowVectorXd res){
                     // cout << " --------------------------- Resetting the residuals matrix , looking for new batch of residuals ------------------------------- \n\n" << endl;
 
 
-                    (residuals).setZero(300,4); // reset residuals matrix and the res count
+                    (residuals).setZero(500,4); // reset residuals matrix and the res count
                     res_count = -1;
 
 

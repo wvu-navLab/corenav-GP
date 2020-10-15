@@ -91,6 +91,7 @@ public:
 // Calls LoadParameters and RegisterCallbacks. Fails on failure of either.
         bool Initialize(const ros::NodeHandle& n);
 
+
 // private:
 // Node initialization
         bool Init(const ros::NodeHandle& n);

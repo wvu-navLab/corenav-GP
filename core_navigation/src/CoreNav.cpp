@@ -45,6 +45,7 @@ bool CoreNav::Init(const ros::NodeHandle& n){
 
         error_states_ = Eigen::VectorXd::Zero(num_states_);
 
+
         // // Construct initial P matrix, Diagonal P
         P_= Eigen::MatrixXd::Zero(num_states_,num_states_);
         P_pred=Eigen::MatrixXd::Zero(num_states_,num_states_);
@@ -419,6 +420,8 @@ void CoreNav::Propagate(const CoreNav::Vector6& imu, const CoreNav::Vector13& od
         // Q Matrix
         Q_ = CoreNav::calc_Q(R_N,R_E,ins_pos_, dt_imu_, CbnPlus, f_ib_b_);
 
+
+
         // P Matrix
         P_=STM_*P_*STM_.transpose()+ Q_;
 
@@ -568,9 +571,9 @@ void CoreNav::Update(const CoreNav::Vector13& odo,const CoreNav::Vector4& joint)
 
         //  ADD UPDATE FUNCTION HERE  // *********************************************************
       //****************************************************************************************
-        //normalUpdate(res); // Standard filter
+        normalUpdate(res); // Standard filter
         //huberUpdate(res);  // Huber-ICE filter (Karlgraad + Ryan)
-        orkf1Update(res);  // Variational Filter by Agememnoni An outlier robust Kalman Filter
+        //orkf1Update(res);  // Variational Filter by Agememnoni An outlier robust Kalman Filter
         //orkf2Update(res);  // Variational Filter by Sarkka Recursive outlier-robust filtering and smoothing for nonlinear systems using the multivariate Student-t distribution
         //orkf3Update(res);  // Covariance Scaling filter by Yang Adaptively robust filtering for kinematic geodetic positioning
         //orkf4Update(res);  // Another scaling filter by G Chang  Robust Kalman filtering based on Mahalanobis distance as outlier judging criterion
@@ -767,61 +770,61 @@ void CoreNav::normalUpdate(Eigen::RowVectorXd res){
 void CoreNav::huberUpdate(Eigen::RowVectorXd res){
 
         //Huber-ICE filter (Karlgraad + Ryan) Non-linear Regression HUber-Kalman Filtering and Fixed-Interval Smoothing
-        iceclass.icefunc(res);
-
-        std::vector<mixtureComponents> globalMixtureModelLatest = iceclass.globalMixtureModel;
-
-        int ind(0);
-        double prob, probMax(0.0);
-        Eigen::MatrixXd cov_min(4,4);     //TODO: is the size okay ?
-        Eigen::RowVectorXd mean_min(4);
-
-        for(int k=0; k<globalMixtureModelLatest.size();k++){
-
-            merge::mixtureComponents mixtureComp = globalMixtureModelLatest[k];
-
-            auto cov = mixtureComp.get<4>();
-
-            Eigen::RowVectorXd mean = mixtureComp.get<3>();
-
-            double quadform  = res* (mixtureComp.get<4>()).inverse() * (res).transpose();
-            double norm = std::pow(std::sqrt(2 * M_PI),-1) * std::pow((mixtureComp.get<4>()).determinant(), -0.5);
-
-            prob = (norm) * exp(-0.5 * quadform);  // select best component
-
-            if (prob >= probMax)
-            {
-                    ind = k;
-                    probMax = prob;
-                    cov_min = mixtureComp.get<4>();
-                    mean_min = mixtureComp.get<3>();
-            }
-          }
-
-      R_ = cov_min;
-      iceclass.all_res_count +=1 ;
+      //   iceclass.icefunc(res);
+      //
+      //   std::vector<mixtureComponents> globalMixtureModelLatest = iceclass.globalMixtureModel;
+      //
+      //   int ind(0);
+      //   double prob, probMax(0.0);
+      //   Eigen::MatrixXd cov_min(4,4);     //TODO: is the size okay ?
+      //   Eigen::RowVectorXd mean_min(4);
+      //
+      //   for(int k=0; k<globalMixtureModelLatest.size();k++){
+      //
+      //       merge::mixtureComponents mixtureComp = globalMixtureModelLatest[k];
+      //
+      //       auto cov = mixtureComp.get<4>();
+      //
+      //       Eigen::RowVectorXd mean = mixtureComp.get<3>();
+      //
+      //       double quadform  = res* (mixtureComp.get<4>()).inverse() * (res).transpose();
+      //       double norm = std::pow(std::sqrt(2 * M_PI),-1) * std::pow((mixtureComp.get<4>()).determinant(), -0.5);
+      //
+      //       prob = (norm) * exp(-0.5 * quadform);  // select best component
+      //
+      //       if (prob >= probMax)
+      //       {
+      //               ind = k;
+      //               probMax = prob;
+      //               cov_min = mixtureComp.get<4>();
+      //               mean_min = mixtureComp.get<3>();
+      //       }
+      //     }
+      //
+      // R_ = cov_min;
+      // iceclass.all_res_count +=1 ;
 
       // checking for inlier or outlier
-      double mahalcost(0.0);
-      mahalcost = res*(H_*P_*H_.transpose()+R_).inverse()*res.transpose();
-      double critical_valchi4 = 9.488;
-
-      double scale = mahalcost/critical_valchi4;
-
-      if (scale < 1.0){
-          iceclass.is_outlier = false;
-          R_ = cov_min;
-          iceclass.icefunc(res);
-      }
-      // inflate  the R_ matrix if outlier
-      else{
-          iceclass.is_outlier = true;
-          R_ = R_;
-          iceclass.res_count +=1 ;
-          if (iceclass.res_count == 99){
-          iceclass.merging(res);
-        }
-      }
+      // double mahalcost(0.0);
+      // mahalcost = res*(H_*P_*H_.transpose()+R_).inverse()*res.transpose();
+      // double critical_valchi4 = 9.488;
+      //
+      // double scale = mahalcost/critical_valchi4;
+      //
+      // if (scale < 1.0){
+      //     iceclass.is_outlier = false;
+      //     R_ = cov_min;
+      //     iceclass.icefunc(res);
+      // }
+      // // inflate  the R_ matrix if outlier
+      // else{
+      //     iceclass.is_outlier = true;
+      //     R_ = R_;
+      //     iceclass.res_count +=1 ;
+      //     if (iceclass.res_count == 499){
+      //     iceclass.merging(res);
+      //   }
+      // }
 
         Eigen::MatrixXd epCov(19,19);
         epCov.setZero(19,19);
@@ -899,11 +902,11 @@ void CoreNav::orkf1Update(Eigen::RowVectorXd res){
 
       ROS_INFO_ONCE(" Running variational filter ");
       double likelihood = 0.0;
-      int s = 5;  // s > d-1; d is the dimension of the measurements, here it is 4
+      int s = 3;  // s > d-1; d is the dimension of the measurements, here it is 4
       double threshold = 0.9;
-      double mahalcost(0.0);
-      mahalcost = res*(H_*P_*H_.transpose()+R_).inverse()*res.transpose();
-      double critical_valchi4 = 9.488;
+      // double mahalcost(0.0);
+      // mahalcost = res*(H_*P_*H_.transpose()+R_).inverse()*res.transpose();
+      // double critical_valchi4 = 9.488;
       // double K_k;
       // double scale = mahalcost/critical_valchi4;
       // if (scale < 1.0){
@@ -912,13 +915,12 @@ void CoreNav::orkf1Update(Eigen::RowVectorXd res){
       // else{
       //   K_k = scale;
       // }
-
       MatrixXd R_post(4,4);
       R_post = R_;
-      //R_post = (K_k -1)*H_*P_*H_.transpose()+ K_k*R_;
+      // R_post = (K_k -1)*H_*P_*H_.transpose()+ K_k*R_;
 
 
-      for (int i = 0; i < 30; i++){
+      for (int i = 0; i < 20; i++){
 
           K_ << P_*H_.transpose()*(H_*P_*H_.transpose()+R_post).inverse();
 
@@ -958,8 +960,8 @@ void CoreNav::orkf2Update(Eigen::RowVectorXd res){
         double lambda = 1;
         double neu = 4; // parameter for gamma prior for lambda
         double d = 4;
-        double k = 1;   // scaling factor for UKF
-        int N = 4;
+        double k = 3;   // scaling factor for UKF
+        int N = 10;
         int n = 15; //Dimension of the state
         double w0 = k/(n+k);
 
@@ -1085,7 +1087,7 @@ void CoreNav::orkf5Update(Eigen::RowVectorXd res){
         R_ = alpha*R_ + (1 - alpha)*(residual.transpose()*residual +  H_*P_*H_.transpose());
         K_ << P_*H_.transpose()*(H_*P_*H_.transpose()+R_).inverse();
         P_= (Eigen::MatrixXd::Identity(15,15) - K_*H_) * P_ * ( Eigen::MatrixXd::Identity(15,15) - K_ * H_ ).transpose() + K_ * R_ * K_.transpose();
-
+        Q_ = alpha*Q_ + (1-alpha)*K_*res.transpose()*res*K_.transpose();
 }
 
 

@@ -43,9 +43,9 @@ init:
   #     z: 4.047980191900000e+06
 
 imu:
-  publish_hz: 250
-  sensor_pub_rate: 250
-  topic: /imu/data
+  publish_hz: 50
+  sensor_pub_rate: 50
+  topic: /imu_filtered
   noise:
     sig_gyro_inRun : 7.757018897752577e-06
     sig_ARW : 2.908882086657216e-05

@@ -103,7 +103,7 @@ bool CoreNav::Init(const ros::NodeHandle& n){
         0.0,0.0,0.05*0.05,0.0,
         0.0,0.0,0.0,1.0;
 
-        R_<<R_1*R_2*R_1.transpose();
+        R_<<25*R_1*R_2*R_1.transpose();
         R_IP<<R_;
 
         R_IP_1 <<0.5,     0.5,    0.0, 0.0,
@@ -1369,7 +1369,8 @@ void CoreNav::NonHolonomic(const CoreNav::Vector6& imu,const CoreNav::Vector3 ve
         CoreNav::Matrix3 Cnb = CoreNav::eul_to_dcm(att[0],att[1],att[2]);
         // ROS_INFO_STREAM("Cnb:\n" << Cnb);
         // CoreNav::Vector3 lf2b(-0.272, 0.0, 0.272);
-        CoreNav::Vector3 lf2b(0.35, 0.0, 0.272);
+        // CoreNav::Vector3 lf2b(0.35, 0.0, 0.272);
+        CoreNav::Vector3 lf2b(0.0, 0.0, 0.272);
 
         z_holo.row(0) = -eye3.row(1)*(Cnb*vel-CoreNav::skew_symm(omega_b_ib)*lf2b); //z31
         // ROS_INFO_STREAM("z_holo.row(0)\n" << z_holo.row(0));
@@ -1378,7 +1379,7 @@ void CoreNav::NonHolonomic(const CoreNav::Vector6& imu,const CoreNav::Vector3 ve
         H_holo.row(0) << zeros3.row(0), -eye3.row(1)*Cnb, zeros3.row(0), zeros3.row(0), zeros3.row(0); //h32
         H_holo.row(1) << zeros3.row(0), -eye3.row(2)*Cnb, zeros3.row(0), zeros3.row(0), zeros3.row(0); //h42
 
-        if (abs(omega_b_ib[2]>0.05)) {
+        if (abs(omega_b_ib[2]>0.1)) {
           R_holoS << 0.05;
           z_holoS << -eye3.row(2)*(Cnb*vel-CoreNav::skew_symm(omega_b_ib)*lf2b);
           H_holoS << zeros3.row(0), -eye3.row(2)*Cnb, zeros3.row(0), zeros3.row(0), zeros3.row(0);

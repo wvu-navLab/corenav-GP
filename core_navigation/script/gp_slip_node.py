@@ -1,14 +1,13 @@
 #!/usr/bin/env python
 import sys
-# sys.path.append('/home/urcnuc115/GPy') //dont forget This
 import GPy
 import rospy
 import numpy as np
-from matplotlib import pyplot as plt
-from utils.data import *
+#from matplotlib import pyplot as plt
+#from utils.data import *
 from core_nav.msg import GP_Input
 from core_nav.msg import GP_Output
-from IPython.display import display
+#from IPython.display import display
 
 pub = rospy.Publisher('/core_nav/core_nav/gp_result', GP_Output, queue_size=1)
 
@@ -40,8 +39,8 @@ def callback(data):
 # display(m)
     means = []  # predictions
     variances = []  # uncertainty
-    means2= [] #predictions
-    variances2 = [] #uncertainty
+    #means2= [] #predictions
+    #variances2 = [] #uncertainty
 # X_=np.arange(X.min(),X.max()+50, 0.1)
     X_ = np.arange(X.min(), X.max() + 600, 1)
 
@@ -49,8 +48,8 @@ def callback(data):
         mean, covar = m.predict(np.array([[x]]))
         variances.append(covar[0])
         means.append(mean[0])
-        means2.append(mean[0])
-        variances2.append(covar[0])
+        #means2.append(mean[0])
+        #variances2.append(covar[0])
 
     # **************************
 
@@ -63,10 +62,10 @@ def callback(data):
     rospy.loginfo("Publishing GP Results")
     pub.publish(msg_out)
 
-    ses = 2 * np.sqrt(np.array(variances2))
-    means = np.array(means2)
-    var1 = np.array(means + ses).reshape(1, len(means + ses))
-    var2 = np.array(means - ses).reshape(1, len(means - ses))
+    #ses = 2 * np.sqrt(np.array(variances2))
+    #means = np.array(means2)
+    #var1 = np.array(means + ses).reshape(1, len(means + ses))
+    #var2 = np.array(means - ses).reshape(1, len(means - ses))
     # m.plot()
     # plt.xlim(X.min(), X_.max())
     # plt.plot(X, Y, c='r', linewidth=0.2)
@@ -80,7 +79,7 @@ def callback(data):
 def gaussian_process():
     rospy.init_node('gp_slip_node')
     rospy.Subscriber('/core_nav/core_nav/gp_input', GP_Input, callback)
-    rospy.loginfo_once("GP Mode Has Started")
+    #rospy.loginfo_once("GP Mode Has Started")
     rospy.spin()
 
 

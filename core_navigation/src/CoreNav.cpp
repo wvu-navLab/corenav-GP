@@ -30,8 +30,16 @@ if (cmd[0] == 1) {
 } else {
   ROS_ERROR_THROTTLE(1, "Rover is not moving: %.2f", cmd[0]);
 }
-if (startRecording / 10 >= (odomUptCount / 10) - 1)
-{ROS_INFO_THROTTLE(5, "Remaining Time to Stop= %.2f s", (startRecording / 10) - (odomUptCount / 10) - 1);
+if (startRecording / 10 >= (odomUptCount / 10))
+{
+  if ((startRecording / 10) - (odomUptCount / 10) - 1 > 0.0)
+  {
+    ROS_INFO_THROTTLE(5, "Remaining Time for next recording= %.2f s", (startRecording / 10) - (odomUptCount / 10) - 1);
+  }
+  if ((startRecording / 10) - (odomUptCount / 10) - 6 > 0.0)
+  {
+    ROS_WARN_THROTTLE(1,"Remaining time to stop= %.2f s", (startRecording / 10) - (odomUptCount / 10) - 6);
+  }
 } else {
 ROS_WARN_THROTTLE(5,"Recording GP Input between %.2f sec and %.2f sec",startRecording/10.0,stopRecording/10.0);
 }
@@ -244,7 +252,7 @@ void CoreNav::Update(){
         }
 
         if (std::isnan(vlin)) {
-          ROS_ERROR_ONCE("VELOCITY IS NaN - Restart required");
+          ROS_FATAL("VELOCITY IS NaN - Restart required");
         }
 
 if (slip !=0.0 && slip !=-1.0 && slip !=1.0 && fabs(cmd[0])>0.2) //&& cmd_vel == 1
@@ -266,7 +274,7 @@ if (slip !=0.0 && slip !=-1.0 && slip !=1.0 && fabs(cmd[0])>0.2) //&& cmd_vel ==
 
     if (std::isnan(slip))
     {
-      ROS_ERROR_ONCE("SLIP IS NaN - Restart required");
+      ROS_FATAL("SLIP IS NaN - Restart required");
     }
     slip_msg.slip_array.push_back(slip);
     slip_msg.time_array.push_back(odomUptCount);
@@ -283,8 +291,8 @@ if (slip !=0.0 && slip !=-1.0 && slip !=1.0 && fabs(cmd[0])>0.2) //&& cmd_vel ==
             gp_flag=true;
             ROS_WARN_STREAM("slip_message size: "<< slip_msg.slip_array.size());
             ROS_WARN_STREAM("time_message size: "<< slip_msg.time_array.size());
-            if (slip_msg.slip_array.size()==0) {
-              ROS_ERROR("SLIP MESSAGE IS EMPTY");
+            if (slip_msg.slip_array.size() < 15.0) {
+              ROS_ERROR_STREAM("GP skipped due to insufficent slip message size: " << slip_msg.slip_array.size());
             }
             else{
               gp_pub.publish(slip_msg);
@@ -299,12 +307,19 @@ if (slip !=0.0 && slip !=-1.0 && slip !=1.0 && fabs(cmd[0])>0.2) //&& cmd_vel ==
       ROS_DEBUG("NEW STOP DATA ARRIVED!");
 
         new_stop_data_arrived_ = false; // Set the flag back to false, so that this does not happen again until new data comes in on the subscriber callback and sets this flag back to true
-        startRecording=stopRecording+ceil(cmd_stop_)*10+10+30;
+        startRecording=stopRecording+ceil(cmd_stop_)*10+10+50;
         stopRecording=startRecording+150;
         ROS_WARN("Start Next Recording at %.2f", startRecording/10);
         ROS_WARN("Stop Next Recording at %.2f", stopRecording/10);
         gp_flag =false; // DONT FORGET THIS IN HERE
     }
+  }
+  if(!first_driving_flag && odomUptCount/10-stopRecording/10>10){
+    ROS_ERROR("Unexpected stop detected, reinitiating the stopping_service!");
+    slip_msg.slip_array.clear();
+    slip_msg.time_array.clear();
+    first_driving_flag=true;
+    gp_flag=false;
   }
 }
 
@@ -779,7 +794,7 @@ CoreNav::Vector CoreNav::getCmdData(const CmdData& cmd_data_){
                 if(fabs(cmd_data_.linear.x) < 0.0001)
                 {
                         started_driving_again_flag = false;
-                        ROS_INFO_ONCE("set started driving again flag to false");
+                        ROS_ERROR("set started driving again flag to false");
                 }
         }
         if(started_driving_again_flag==false)
@@ -788,7 +803,7 @@ CoreNav::Vector CoreNav::getCmdData(const CmdData& cmd_data_){
                 {
                         started_driving_again_flag = true;
                         gp_flag = false;
-                        ROS_INFO_ONCE("set GP flag back to false");
+                        ROS_ERROR("set GP flag back to false");
                 }
         }
         return cmdVec;
@@ -1007,7 +1022,7 @@ bool CoreNav::Init(const ros::NodeHandle& n){
                   0,0,std::pow(0.0025,2),0,0,0,
                   0,0,0,std::pow(0.02,2),0,0,
                   0,0,0,0,std::pow(0.02,2),0,
-                  0,0,0,0,0,std::pow(0.02,2);
+                  0,0,0,0,0,std::pow(1.0,2);
 
         // NON HOLONONOMIC R VALUES
         R_holo << 0.05,0,

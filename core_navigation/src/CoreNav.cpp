@@ -1254,7 +1254,7 @@ bool CoreNav::Init(const ros::NodeHandle& n){
                     0,0,std::pow(0.0025,2),0,0,0,
                     0,0,0,std::pow(0.02,2),0,0,
                     0,0,0,0,std::pow(0.02,2),0,
-                    0,0,0,0,0,std::pow(0.02,2);
+                    0,0,0,0,0,std::pow(1.0,2);
 
           // NON HOLONONOMIC R VALUES
           R_holo << 0.05,0,

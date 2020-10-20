@@ -37,14 +37,15 @@ ICEclass::ICEclass(){          // residuals in corenav are 4 dimensional
   Eigen::MatrixXd c(4,4);
   Eigen::MatrixXd c1(4,4);
   Eigen::MatrixXd c2(4,4);
+  double T_r_ = 0.685;
   c1<<0.5,0.5,0.0,0.0,
-      1/1.5748, -1/1.5748, 0.0,0.0,
-      0.0, 0.0,1.0,0.0,
-      0.0,0.0,0.0,1.0;
-  c2<<0.05*0.05, 0.0,0.0,0.0,
-      0.0, 0.05*0.05, 0.0,0.0,
-      0.0,0.0,0.05*0.05,0.0,
-      0.0,0.0,0.0,1.0;
+  1/T_r_, -1/T_r_, 0.0,0.0,
+  0.0, 0.0,1.0,0.0,
+  0.0,0.0,0.0,1.0;
+  c2<<0.03*0.03, 0.0,0.0,0.0,
+  0.0, 0.03*0.03, 0.0,0.0,
+  0.0,0.0,0.05*0.05,0.0,
+  0.0,0.0,0.0,0.05*0.05;
 
   c<<c1*c2*c1.transpose();
   globalMixtureModel.push_back(boost::make_tuple(0, 0, 0.0, m, c));
@@ -150,15 +151,15 @@ void ICEclass::merging(Eigen::RowVectorXd res){
 
                     // cout << "\n\n\n\n\n\n" << endl;
                     // cout << "----------------- Merged MODEL ----------------" << endl;
-                    for (int i=0; i<globalMixtureModel.size(); i++)
-                    {
-                            // cout << "Component -- " << i << "\n" << endl;
-                            mixtureComponents mc = (globalMixtureModel)[i];
-                            auto cov = mc.get<4>();
-                            // cout << "Total number of obervations -- " << mc.get<0>() << "\n" << " Number of observations in component -- " << mc.get<1>() << "\n"<< " Weight of component -- "  <<  mc.get<2>()<< "\n" << " Component mean -- " << mc.get<3>() << "\n" << " component covariance -- " << "\n" << cov << "\n\n" <<  endl;
-
-
-                    }
+                    // for (int i=0; i<globalMixtureModel.size(); i++)
+                    // {
+                    //         // cout << "Component -- " << i << "\n" << endl;
+                    //         mixtureComponents mc = (globalMixtureModel)[i];
+                    //         auto cov = mc.get<4>();
+                    //         // cout << "Total number of obervations -- " << mc.get<0>() << "\n" << " Number of observations in component -- " << mc.get<1>() << "\n"<< " Weight of component -- "  <<  mc.get<2>()<< "\n" << " Component mean -- " << mc.get<3>() << "\n" << " component covariance -- " << "\n" << cov << "\n\n" <<  endl;
+                    //
+                    //
+                    // }
 
                     // cout << " --------------------------- Resetting the residuals matrix , looking for new batch of residuals ------------------------------- \n\n" << endl;
 

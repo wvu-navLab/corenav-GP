@@ -200,10 +200,10 @@ void CoreNav::Update(){
 
         //  ADD UPDATE FUNCTION HERE  // *********************************************************
       //****************************************************************************************
-        normalUpdate(res); // Standard filter
-        //huberUpdate(res);  // Huber-ICE filter (Karlgraad + Ryan)
-        //orkf1Update(res);  // Variational Filter by Agememnoni An outlier robust Kalman Filter
+        //normalUpdate(res); // Standard filter
+        huberUpdate(res);  // Huber-ICE filter (Karlgraad + Ryan)
         //orkf2Update(res);  // Variational Filter by Sarkka Recursive outlier-robust filtering and smoothing for nonlinear systems using the multivariate Student-t distribution
+        //orkf1Update(res);  // Variational Filter by Agememnoni An outlier robust Kalman Filter
         //orkf3Update(res);  // Covariance Scaling filter by Yang Adaptively robust filtering for kinematic geodetic positioning
         //orkf4Update(res);  // Another scaling filter by G Chang  Robust Kalman filtering based on Mahalanobis distance as outlier judging criterion
         //orkf5Update(res);  // Adaptive filter by Akhlaghi  https://arxiv.org/pdf/1702.00884.pdf
@@ -622,8 +622,8 @@ void CoreNav::huberUpdate(Eigen::RowVectorXd res){
       //
       // R_ = cov_min;
       // iceclass.all_res_count +=1 ;
-
-      // checking for inlier or outlier
+      //
+      // // checking for inlier or outlier
       // double mahalcost(0.0);
       // mahalcost = res*(H_*P_*H_.transpose()+R_).inverse()*res.transpose();
       // double critical_valchi4 = 9.488;
@@ -674,7 +674,7 @@ void CoreNav::huberUpdate(Eigen::RowVectorXd res){
         typedef Eigen::Matrix<double, 19, 1> Vector19d;
         Vector19d omeg;
 
-        double delta = 2.0;
+        double delta = 3.0;
 
         Eigen::VectorXd error_states_prev = error_states_;
         double diff(100.0);
@@ -682,17 +682,13 @@ void CoreNav::huberUpdate(Eigen::RowVectorXd res){
         DiagonalMatrix<double, 19 > M;
         int iter(0);
         double weight(1);
-        while (diff > 0.000000001){                               // iterative re-weighted least squares
+        while (diff > 0.000001){                               // iterative re-weighted least squares
 
         for (int i = 0; i < 19; i++){
           if ( (Y(i) - X.row(i)*error_states_) != 0.0 ){
-            if (std::abs(Y(i) - X.row(i)*error_states_) >10){
-              omeg(i) = weight*derivcost((Y(i) - X.row(i)*error_states_prev), delta)/(Y(i) - X.row(i)*error_states_);
-              //cout << "De-weighting......" << endl;
-            }
-            else{
+            //if ( i > 14){  // Only thresholding the measurements
               omeg(i) = derivcost((Y(i) - X.row(i)*error_states_prev), delta)/(Y(i) - X.row(i)*error_states_);
-              }
+            //  }
             }
           else{
             omeg(i) = 1;
@@ -703,9 +699,10 @@ void CoreNav::huberUpdate(Eigen::RowVectorXd res){
         M = omeg.asDiagonal();
         error_states_ = ((X.transpose()*M*X).inverse())*(X.transpose()*M*Y);
         iter = iter +1;
+        cout << "Iteration NUmber " << iter << endl;
 
         diff = (error_states_ - error_states_prev).norm();
-        if (diff < 0.000000001){
+        if (diff < 0.000001){
           ROS_INFO("converged --- Going to next epoch");
         }
 
@@ -1249,7 +1246,7 @@ bool CoreNav::Init(const ros::NodeHandle& n){
           0.0,0.0,0.05*0.05,0.0,
           0.0,0.0,0.0,0.05*0.05;
 
-          R_<<25*R_1*R_2*R_1.transpose();
+          R_<< 1*R_1*R_2*R_1.transpose();
 
           // ZERO UPDATES R VALUES
           R_zero << std::pow(0.01,2),0,0,0,0,0,

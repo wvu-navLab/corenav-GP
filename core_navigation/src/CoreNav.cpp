@@ -820,7 +820,7 @@ void CoreNav::PublishStates(const CoreNav::Vector3& states,const ros::Publisher&
         msg.point.y = states(1);
         msg.point.z = states(2);
         msg.header.frame_id = frame_id_fixed_;
-        msg.header.stamp = stamp_;
+        msg.header.stamp = ros::Time::now();
 
         pub.publish(msg);
 }
@@ -835,7 +835,7 @@ void CoreNav::PublishStatesSlip(const CoreNav::Vector3& slip_states,const ros::P
         msg.point.y = slip_states(1); //rearWheelLinearVelocity
         msg.point.z = slip_states(2); //INSestimatedLinearVelocityX
         msg.header.frame_id = frame_id_fixed_;
-        msg.header.stamp = stamp_;
+        msg.header.stamp = ros::Time::now();
 
         slip_pub.publish(msg);
 }
@@ -864,7 +864,7 @@ void CoreNav::PublishStatesCN(const CoreNav::Vector9& cn_states,const ros::Publi
         CNmsg.twist.twist.linear.z=-cn_states(5);
         CNmsg.header.frame_id = frame_id_fixed_;
         CNmsg.child_frame_id = frame_id_imu_;
-        CNmsg.header.stamp = stamp_;
+        CNmsg.header.stamp = ros::Time::now();
 
         cn_pub_.publish(CNmsg);
 }

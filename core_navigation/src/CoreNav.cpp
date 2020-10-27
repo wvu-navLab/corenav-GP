@@ -1246,7 +1246,7 @@ bool CoreNav::Init(const ros::NodeHandle& n){
           0.0,0.0,0.05*0.05,0.0,
           0.0,0.0,0.0,0.05*0.05;
 
-          R_<< 1*R_1*R_2*R_1.transpose();
+          R_<< 25*R_1*R_2*R_1.transpose();
 
           // ZERO UPDATES R VALUES
           R_zero << std::pow(0.01,2),0,0,0,0,0,

@@ -37,5 +37,17 @@ If you find this library useful, please cite the following publication:
             
         }
 
+* Cagri Kilic, Jason Gross, November 23, 2020, **Pathfinder GPS, IMU, and Wheel Odometry Data on Various Terrains**, IEEE Dataport, doi: https://dx.doi.org/10.21227/vz7z-jc84. 
+
+        @data{Kilic2020Pathfinder,
+           doi = {10.21227/vz7z-jc84},
+           url = {https://dx.doi.org/10.21227/vz7z-jc84},
+           author = {Cagri Kilic; Jason Gross },
+           publisher = {IEEE Dataport},
+           title = {Pathfinder GPS, IMU, and Wheel Odometry Data on Various Terrains},
+           year = {2020} } 
+            
+        }
+
 
 * Cagri Kilic, Nicholas Ohi, Yu Gu, Jason N. Gross: **Slip-Based Autonomous ZUPT through Gaussian Process to Improve Planetary Rover Proprioceptive Localization**.

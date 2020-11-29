@@ -5,7 +5,6 @@
 
 ## Overview
 Slip-Based Autonomous ZUPT through Gaussian Process to Improve Planetary Rover Proprioceptive Localization
-...
 
 ## Architecture
 

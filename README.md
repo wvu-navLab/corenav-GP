@@ -37,7 +37,7 @@ If you find this library useful, please cite the following publication:
             
         }
 
-**[2]** Cagri Kilic, Jason Gross, November 23, 2020, **Pathfinder GPS, IMU, and Wheel Odometry Data on Various Terrains**, IEEE Dataport, doi: https://dx.doi.org/10.21227/vz7z-jc84. 
+**[2]** Cagri Kilic and Jason Gross: **Pathfinder GPS, IMU, and Wheel Odometry Data on Various Terrains**, IEEE Dataport, November 23, 2020, doi: https://dx.doi.org/10.21227/vz7z-jc84. 
 
         @data{Kilic2020Pathfinder,
            doi = {10.21227/vz7z-jc84},

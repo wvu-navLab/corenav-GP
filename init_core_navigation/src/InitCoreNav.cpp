@@ -1,3 +1,7 @@
+/* @file   InitCoreNav.cpp
+ * @brief  CoreNav Initialization Process
+ * @author Cagri Kilic
+ */
 #include <init_core_navigation/InitCoreNav.h>
 #include <geometry_msgs/PoseStamped.h>
 #include <geometry_utils/GeometryUtilsROS.h>

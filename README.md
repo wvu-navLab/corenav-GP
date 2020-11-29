@@ -4,12 +4,12 @@
 
 
 ## Overview
-(TBD) Slip-aware Navigation Stop Planning for Autonomous Planetary Rover Applications
+Slip-Based Autonomous ZUPT through Gaussian Process to Improve Planetary Rover Proprioceptive Localization
 ...
 
 ## Architecture
 
-<img alt="architecture" src="docs/algorithm.png" width="700">
+<img alt="architecture" src="docs/framework.png" width="700">
 
 **Keywords:** Mars Sample Return, planetary rovers, time series prediction, slip, zero velocity update, rover localization
 
@@ -22,6 +22,4 @@ Maintainer: Cagri Kilic, cakilic@mix.wvu.edu**
 
 If you use this work in an academic context, please cite the following publication:
 
-* Cagri Kilic, Jason N. Gross, Nicholas Ohi, Yu Gu: **Slip-aware Navigation Stop Planning for Autonomous Planetary Rover Applications**. 
-
-
+* Cagri Kilic, Nicholas Ohi, Yu Gu, Jason N. Gross: **Slip-Based Autonomous ZUPT through Gaussian Process to Improve Planetary Rover Proprioceptive Localization**.

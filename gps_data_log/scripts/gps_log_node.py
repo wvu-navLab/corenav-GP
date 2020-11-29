@@ -1,3 +1,8 @@
+# /* @file   gps_log_node.py
+#  * @brief  Novatel GPS Logger
+#  * @author Nicholas Ohi
+#  * @author Cagri Kilic
+#  */
 #!/usr/bin/env python
 import rospy
 import serial

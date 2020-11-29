@@ -1,3 +1,8 @@
+/* @file   gps_CoreNav.cpp
+ * @brief  Loosely Coupled GPS-IMU algorithm
+ * @author Cagri Kilic
+ * @author Jason Gross
+ */
 #include <gps_core_navigation/gps_CoreNav.h>
 #include <gps_core_navigation/InsConst.h>
 #include <gps_core_navigation/InsUtils.h>

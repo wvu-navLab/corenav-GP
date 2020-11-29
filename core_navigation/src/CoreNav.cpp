@@ -1,3 +1,9 @@
+/* @file   CoreNav.cpp
+ * @brief  Core Navigation ES-EKF Node
+ * @author Cagri Kilic
+ * @author Jason Gross
+ */
+
 #include <core_navigation/CoreNav.h>
 #include <core_navigation/InsConst.h>
 #include <core_navigation/InsUtils.h>

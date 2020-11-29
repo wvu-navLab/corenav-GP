@@ -1,3 +1,8 @@
+/* @file   gp_predictor.cpp
+ * @brief  Gaussian Prediction Node
+ * @author Cagri Kilic
+ */
+
 #include <ros/ros.h>
 #include <gp_predictor/gp_predictor.h>
 
@@ -94,7 +99,7 @@ void GpPredictor::GPCallBack(const core_nav::GP_Output::ConstPtr& gp_data_in_){
             xy_errSlip = sqrt((ins_enu_slip3p(0)-ins_enu_slip(0))*(ins_enu_slip3p(0)-ins_enu_slip(0)) + (ins_enu_slip3p(1)-ins_enu_slip(1))*(ins_enu_slip3p(1)-ins_enu_slip(1)));
             ROS_ERROR_THROTTLE(0.5,"XYerror %.6f meters", xy_errSlip);
 
-            if (xy_errSlip > 2.00)
+            if (xy_errSlip > 3.00) //Threshold can be set in here
             {
 
               ROS_INFO("Stop Command Required, error is more than %.2f meters", xy_errSlip);
@@ -138,8 +143,6 @@ bool GpPredictor::LoadParameters(const ros::NodeHandle& nh_){
 
 GpPredictor::Vector3 GpPredictor::llh_to_enu(double lat, double lon, double height){
 
-        // countLLH2ENU++;
-        // ROS_INFO_STREAM("countLLH2ENU: " << countLLH2ENU);
         double phi = lat;
         double lambda = lon;
         double h = height;

@@ -1,3 +1,7 @@
+/* @file   imu_filter.cpp
+ * @brief  IMU Filter for ADIS
+ * @author Cagri Kilic
+ */
 #include <ros/ros.h>
 #include <sensor_msgs/Imu.h>
 #include <message_filters/subscriber.h>

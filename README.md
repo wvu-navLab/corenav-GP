@@ -23,7 +23,7 @@ Slip-Based Autonomous ZUPT through Gaussian Process to Improve Planetary Rover P
 
 If you find this library useful, please cite the following publication:
 
-[1] Cagri Kilic, Jason N. Gross, Nicholas Ohi, Ryan Watson, Jared Strader, Thomas Swiger, Scott Harper, and Yu Gu: **Improved Planetary Rover Inertial Navigation and Wheel Odometry Performance through Periodic Use of Zero-Type Constraints**. IEEE/RSJ International Conference on Intelligent Robots and Systems (IROS), 2019. ([arXiv:1906.08849](https://arxiv.org/pdf/1906.08849.pdf))
+**[1]** Cagri Kilic, Jason N. Gross, Nicholas Ohi, Ryan Watson, Jared Strader, Thomas Swiger, Scott Harper, and Yu Gu: **Improved Planetary Rover Inertial Navigation and Wheel Odometry Performance through Periodic Use of Zero-Type Constraints**. IEEE/RSJ International Conference on Intelligent Robots and Systems (IROS), 2019. ([arXiv:1906.08849](https://arxiv.org/pdf/1906.08849.pdf))
 
         @inproceedings{Kilic2019,
             author = {Kilic, Cagri and Gross,Jason N. and Ohi,Nicholas and Watson, Ryan and Strader, Jared and Swiger, Thomas and Harper, Scott and Gu, Yu},
@@ -37,7 +37,7 @@ If you find this library useful, please cite the following publication:
             
         }
 
-[2] Cagri Kilic, Jason Gross, November 23, 2020, **Pathfinder GPS, IMU, and Wheel Odometry Data on Various Terrains**, IEEE Dataport, doi: https://dx.doi.org/10.21227/vz7z-jc84. 
+**[2]** Cagri Kilic, Jason Gross, November 23, 2020, **Pathfinder GPS, IMU, and Wheel Odometry Data on Various Terrains**, IEEE Dataport, doi: https://dx.doi.org/10.21227/vz7z-jc84. 
 
         @data{Kilic2020Pathfinder,
            doi = {10.21227/vz7z-jc84},
@@ -50,4 +50,4 @@ If you find this library useful, please cite the following publication:
         }
 
 
-[3] Cagri Kilic, Nicholas Ohi, Yu Gu, Jason N. Gross: **Slip-Based Autonomous ZUPT through Gaussian Process to Improve Planetary Rover Proprioceptive Localization**.
+**[3]** Cagri Kilic, Nicholas Ohi, Yu Gu, Jason N. Gross: **Slip-Based Autonomous ZUPT through Gaussian Process to Improve Planetary Rover Proprioceptive Localization**.

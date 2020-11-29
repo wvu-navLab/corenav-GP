@@ -4,24 +4,26 @@
 
 
 ## Overview
-Slip-Based Autonomous ZUPT through Gaussian Process to Improve Planetary Rover Proprioceptive Localization
-
-## Architecture
-
-<img alt="architecture" src="docs/framework.png" width="700">
-
-**Keywords:** Mars Sample Return, planetary rovers, time series prediction, slip, zero velocity update, rover localization
 
 **Author: Cagri Kilic<br />
 Affiliation: [WVU NAVLAB](https://navigationlab.wvu.edu/)<br />
 Maintainer: Cagri Kilic, cakilic@mix.wvu.edu**
 
+Slip-Based Autonomous ZUPT through Gaussian Process to Improve Planetary Rover Proprioceptive Localization
 
-## Publications
+## Architecture
+<p align="center">
+<img alt="architecture" src="docs/framework.png" width="700">
+</p>        
 
-If you use this work in an academic context, please cite the following publication:
+**Keywords:** Mars Sample Return, planetary rovers, time series prediction, slip, zero velocity update, rover localization
 
-* Cagri Kilic, Jason N. Gross, Nicholas Ohi, Ryan Watson, Jared Strader, Thomas Swiger, Scott Harper, and Yu Gu: **Improved Planetary Rover Inertial Navigation and Wheel Odometry Performance through Periodic Use of Zero-Type Constraints**. IEEE/RSJ International Conference on Intelligent Robots and Systems (IROS), 2019. ([PDF](https://arxiv.org/pdf/1906.08849.pdf))
+
+## Citation
+
+If you find this library useful, please cite the following publication:
+
+* Cagri Kilic, Jason N. Gross, Nicholas Ohi, Ryan Watson, Jared Strader, Thomas Swiger, Scott Harper, and Yu Gu: **Improved Planetary Rover Inertial Navigation and Wheel Odometry Performance through Periodic Use of Zero-Type Constraints**. IEEE/RSJ International Conference on Intelligent Robots and Systems (IROS), 2019. ([arXiv:1906.08849](https://arxiv.org/pdf/1906.08849.pdf))
 
         @inproceedings{Kilic2019,
             author = {Kilic, Cagri and Gross,Jason N. and Ohi,Nicholas and Watson, Ryan and Strader, Jared and Swiger, Thomas and Harper, Scott and Gu, Yu},
@@ -34,5 +36,6 @@ If you use this work in an academic context, please cite the following publicati
             publisher = {IEEE},
             
         }
+
 
 * Cagri Kilic, Nicholas Ohi, Yu Gu, Jason N. Gross: **Slip-Based Autonomous ZUPT through Gaussian Process to Improve Planetary Rover Proprioceptive Localization**.

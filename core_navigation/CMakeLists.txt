@@ -41,11 +41,13 @@ catkin_package(
     tf2_ros
     tf
     libcluster
+    EigenRand
 )
 
 include_directories(
   include
   ${catkin_INCLUDE_DIRS}
+
 )
 
 link_directories(
@@ -55,7 +57,6 @@ link_directories(
 file(GLOB SOURCES "src/*.cpp")
 add_library(${PROJECT_NAME} SHARED ${SOURCES})
 
-#add_library(${PROJECT_NAME} src/CoreNav.cpp)
 target_link_libraries(${PROJECT_NAME}
   ${catkin_LIBRARIES}
 )
@@ -66,10 +67,10 @@ target_link_libraries(${PROJECT_NAME}
   ${catkin_LIBRARIES}
   #${PROJECT_NAME} /home/ck/corenav_dev/src/corenav-GP/libcluster/lib/libcluster.so
   ${PROJECT_NAME} /home/navlabsd/robust_ws/src/corenav-GP/libcluster/lib/libcluster.so
-  #${PROJECT_NAME} ~/trial_ws/src/SRC2-localization-ins/libcluster/lib/libcluster.so
-  #${PROJECT_NAME} ~/srcp2-competitors/ros_workspace/src/rover_localization/corenav_moon/libcluster/lib/libcluster.so
+
 )
 target_link_libraries(${PROJECT_NAME}_node
   ${PROJECT_NAME}
   ${catkin_LIBRARIES}
 )
+add_dependencies(${PROJECT_NAME} $(catkin_EXPORTED_TARGETS))

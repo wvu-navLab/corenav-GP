@@ -69,6 +69,8 @@ joint:
     topic: /dead_reckoning/joint_states
 gp:
     topic: /core_nav/core_nav/gp_result
+res:
+    topic: /core_nav/core_nav/res
 
 frames:
   frame_id_out: map

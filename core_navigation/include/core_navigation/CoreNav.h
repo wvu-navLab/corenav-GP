@@ -54,6 +54,8 @@
 #include <core_nav/GP_Output.h>
 #include <std_msgs/Float64.h>
 #include <core_navigation/ICEclass.h>
+#include <std_msgs/Float32MultiArray.h>
+#include <std_msgs/MultiArrayDimension.h>
 class CoreNav {
 public:
 
@@ -75,6 +77,7 @@ public:
         typedef Eigen::Matrix<double, 15, 1> Vector15;
 
         typedef Eigen::Matrix<double, 3, 3> Matrix3;
+        typedef Eigen::Matrix<double, 4, 4> Matrix4;
         Matrix3 CbnMinus;
         Matrix3 eye3=Eigen::Matrix3d::Identity();
         Matrix3 zeros3=Eigen::Matrix3d::Zero(3,3);
@@ -100,8 +103,11 @@ public:
 
 // Publish estimated  states.
         void PublishStates(const CoreNav::Vector3& states, const ros::Publisher& pub);
+        void PublishStateswCov(const CoreNav::Vector6& states, const ros::Publisher& pub);
+        void PublishStatesenu(const CoreNav::Vector9& states,const ros::Publisher& pub);
         void PublishStatesSlip(const CoreNav::Vector3& slip_states, const ros::Publisher& slip_pub);
         void PublishStatesCN(const CoreNav::Vector9& cn_states, const ros::Publisher& cn_pub_);
+        void PublishRes(Eigen::RowVectorXd res,const ros::Publisher& pub);
         void ImuCallback(const ImuData& imu_data_);
         void OdoCallback(const OdoData& odo_data_);
         void JointCallBack(const JointData& joint_data_);
@@ -113,15 +119,25 @@ public:
 
         double derivcost(double, double);
         void normalUpdate(Eigen::RowVectorXd res);
-        void huberUpdate(Eigen::RowVectorXd res);
+        void huberUpdate();
+        void adaptiveUpdate(Eigen::RowVectorXd res);
         void orkf1Update(Eigen::RowVectorXd res);
+        void orkf1DriftUpdate(Eigen::RowVectorXd res);
         void orkf2Update(Eigen::RowVectorXd res);
         void orkf3Update(Eigen::RowVectorXd res);
-        void orkf5Update(Eigen::RowVectorXd res);
         void orkf4Update(Eigen::RowVectorXd res);
-
+        void orkf5Update(Eigen::RowVectorXd res);
+        void orkf6Update(Eigen::RowVectorXd res);
+        // void rodUpdate();
+        int dof; // degree of freedom of Inverse-Wishart Distribution
+        int dof_prev;
+        int u,t; // parameter in VBAKF
+        int tau;
+        double rho;
         void Update();
         void Propagate();
+        void UpdateR(Eigen::RowVectorXd res);
+        //void sampleR(Eigen::Matrix4f covmat);
 //NonHolonomic constraint
         void NonHolonomic(const CoreNav::Vector3 vel, const CoreNav::Vector3 att, const CoreNav::Vector3 llh, CoreNav::Vector15 errorStates, Eigen::MatrixXd P, CoreNav::Vector3 omega_b_ib);
         //Zero update
@@ -158,7 +174,7 @@ public:
         bool new_gp_data_arrived_;
         double gp_arrived_time_;
 // Publisher.
-        ros::Publisher position_pub_, velocity_pub_, attitude_pub_, enu_pub_,cn_pub_, slip_pub_, gp_pub, stop_cmd_pub_,pos_llh_pub_,ins_xyz_pub_;
+        ros::Publisher position_pub_, velocity_pub_, attitude_pub_, enu_pub_,enu_pub2_,cn_pub_, slip_pub_, gp_pub, stop_cmd_pub_,pos_llh_pub_,ins_xyz_pub_,res_pub_;
         tf::TransformBroadcaster transformed_states_tf_broad;
 
         OdoData odo_data_;
@@ -207,6 +223,7 @@ public:
         std::string encoderLeft_topic_;
         std::string encoderRight_topic_;
         std::string gp_topic_; // CAGRI: this is fine, you just need to set it with a param, like you do with the rest of these. It isn't being set to anything yet in the .cpp file
+        std::string res_topic_;
 // For initialization.
         bool initialized_;
 
@@ -218,8 +235,12 @@ public:
         CoreNav::Vector3 ins_att_, ins_vel_, ins_pos_, ins_attMinus_, ins_velMinus_, ins_posMinus_, ins_enu_,slip_cn_,savePos, ins_enu_slip, ins_enu_slip3p, ins_enu_slip_3p,ins_pos_llh_,ins_xyz_;
         CoreNav::Vector4 Z_;
         CoreNav::Vector9 ins_cn_;
-        CoreNav::Matrix P_, Q_, STM_, P_pred, P;
+        CoreNav::Matrix P_, Q_, STM_, P_pred, P, T;
         Eigen::Matrix<double, 4, 4> R_;
+        Eigen::Matrix<double, 4, 4> R_sample;
+        Eigen::Matrix<double, 4, 4> R_drift;
+        Eigen::Matrix<double, 4, 4> R_drift_prev;
+        Eigen::Matrix<double, 4, 4> U;
         Eigen::Matrix<double, 4, 4> R_1;
         Eigen::Matrix<double, 4, 4> R_2;
         Eigen::Matrix<double, 3, 3> R_zupt;
@@ -281,6 +302,7 @@ public:
         double odomUptCount, startRecording, stopRecording, saveCountOdom;
         ICEclass iceclass;
         Eigen::RowVectorXd residual;
+        Eigen::RowVectorXd ice_mean;
 
 };
 #endif

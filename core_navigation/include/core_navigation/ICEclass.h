@@ -40,7 +40,7 @@ public:
 
   // add constructor
 
-  void icefunc(Eigen::RowVectorXd res);
+  void icefunc(Eigen::RowVectorXd res, int ind);
   void merging(Eigen::RowVectorXd res); // returns the merged mixture model or the same mixture model in case of inlier
 
 

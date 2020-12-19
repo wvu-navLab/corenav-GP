@@ -76,7 +76,7 @@ void CoreNav::Propagate(){
         error_states_ = STM_*error_states_;
 
         // Q Matrix
-        Q_ = 10*CoreNav::calc_Q(R_N,R_E,ins_pos_, dt_imu_, CbnPlus, f_ib_b_);
+        Q_ = CoreNav::calc_Q(R_N,R_E,ins_pos_, dt_imu_, CbnPlus, f_ib_b_);
 
         // P Matrix
         P_=STM_*P_*STM_.transpose()+ Q_;
@@ -110,7 +110,7 @@ void CoreNav::Propagate(){
         z31_ =z31_ + tmp2* dt_imu_;
         z41_ =z41_ + tmp3* dt_imu_;
 
-        // NonHolonomic Update
+        //NonHolonomic Update
         CoreNav::NonHolonomic(ins_vel_, ins_att_, ins_pos_, error_states_, P_, omega_b_ib_);
 
         // Zero-Updates
@@ -623,7 +623,7 @@ void CoreNav::UpdateR(Eigen::RowVectorXd res){
 
             Eigen::RowVectorXd mean = mixtureComp.get<3>();
 
-            double quadform  = res* (mixtureComp.get<4>()).inverse() * (res).transpose();
+            double quadform  = (res-mean)* (mixtureComp.get<4>()).inverse() * (res-mean).transpose();
             double norm = std::pow(std::sqrt(2 * M_PI),-1) * std::pow((mixtureComp.get<4>()).determinant(), -0.5);
 
             prob = (norm) * exp(-0.5 * quadform);  // select best component
@@ -1016,8 +1016,8 @@ void CoreNav::orkf6Update(Eigen::RowVectorXd res){
 
 
   }
-
 // CALLBACKS
+
 bool CoreNav::RegisterCallbacks(const ros::NodeHandle& n){
         // Create a local nodehandle to manage callback subscriptions.
         ros::NodeHandle nl(n);
@@ -1228,7 +1228,7 @@ void CoreNav::PublishStateswCov(const CoreNav::Vector6& states,const ros::Publis
         //CNmsg.pose.covariance = B;
 
         CNmsg.header.frame_id = frame_id_fixed_;
-        CNmsg.header.stamp = ros::Time::now();
+        CNmsg.header.stamp = imu_dataAdis_.header.stamp;
 
         pub.publish(CNmsg);
 }
@@ -1442,7 +1442,7 @@ bool CoreNav::Init(const ros::NodeHandle& n){
           0.0,0.0,0.05*0.05,0.0,
           0.0,0.0,0.0,0.05*0.05;
 
-          R_<< 10*25*R_1*R_2*R_1.transpose();
+          R_<< 25*R_1*R_2*R_1.transpose();
           //R_drift = dof*R_;
           R_drift_prev = dof_prev*R_;
           u  = 350; // try higher than 500 or try with higher tau
@@ -1461,12 +1461,12 @@ bool CoreNav::Init(const ros::NodeHandle& n){
                     0,0,0,std::pow(0.02,2),0,0,
                     0,0,0,0,std::pow(0.02,2),0,
                     0,0,0,0,0,std::pow(1.0,2);
-          R_zero = 10*R_zero;
+          R_zero = R_zero;
 
           // NON HOLONONOMIC R VALUES
           R_holo << 0.05,0,
                     0,0.1;
-          R_holo = 10*R_holo;
+          R_holo = R_holo;
 
 
           H11_<< 0.0,0.0,0.0;

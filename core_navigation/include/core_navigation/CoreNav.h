@@ -303,6 +303,7 @@ public:
         ICEclass iceclass;
         Eigen::RowVectorXd residual;
         Eigen::RowVectorXd ice_mean;
+        ros::Time imuTime;
 
 };
 #endif

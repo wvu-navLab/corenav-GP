@@ -1089,6 +1089,7 @@ void CoreNav::ImuCallback(const ImuData& imu_dataAdis_){
         else{
                 imu_stamp_prev_  = imu_stamp_curr_;
                 imu_stamp_curr_ = (imu_dataAdis_.header.stamp).toSec();
+                imuTime  = imu_dataAdis_.header.stamp;
 
                 //Propagate(imu,odo,cmd,encoderLeft,encoderRight,joint);
                 //         std::cout << "rearVel1_" << '\n';
@@ -1228,7 +1229,7 @@ void CoreNav::PublishStateswCov(const CoreNav::Vector6& states,const ros::Publis
         //CNmsg.pose.covariance = B;
 
         CNmsg.header.frame_id = frame_id_fixed_;
-        CNmsg.header.stamp = imu_dataAdis_.header.stamp;
+        CNmsg.header.stamp = imuTime;
 
         pub.publish(CNmsg);
 }

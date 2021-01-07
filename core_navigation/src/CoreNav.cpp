@@ -909,7 +909,7 @@ void CoreNav::orkf2Update(Eigen::RowVectorXd res){
 }
 void CoreNav::orkf3Update(Eigen::RowVectorXd res){
 
-      //iid noise Variational Filter by Agememnoni An outlier robust Kalman Filter
+      //A Novel Adaptive Kalman Filter with Inaccurate Process and Measurement Noise Covariance Matrices by Yulong Huang
 
       ROS_INFO_ONCE(" Running variational filter ");
       // int n = 15;

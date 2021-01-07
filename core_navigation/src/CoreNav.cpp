@@ -217,14 +217,15 @@ void CoreNav::Update(){
         //res = res-ice_mean;
         //huberUpdate();  // Huber filter (Karlgraad)
         //normalUpdate(res); // Standard filter (Cagri)
-        //orkf2Update(res);  // Variational Filter by Sarkka Recursive outlier-robust filtering and smoothing for nonlinear systems using the multivariate Student-t distribution
         //adaptiveUpdate(res);
-        orkf1Update(res);  // iid noise Variational Filter by Agememnoni An outlier robust Kalman Filter
+        //orkf1Update(res);  // iid noise Variational Filter by Agememnoni An outlier robust Kalman Filter
         //orkf1DriftUpdate(res);  // drifting noise Variational Filter by Agememnoni An outlier robust Kalman Filter
-        //orkf3Update(res);  // Covariance Scaling filter by Yang Adaptively robust filtering for kinematic geodetic positioning
-        //orkf4Update(res);  // Another scaling filter by G Chang  Robust Kalman filtering based on Mahalanobis distance as outlier judging criterion
+        //orkf2Update(res);  // Variational Filter by Sarkka Recursive outlier-robust filtering and smoothing for nonlinear systems using the multivariate Student-t distribution
+        orkf3Update(res);  // A Novel Adaptive Kalman Filter with Inaccurate Process and Measurement Noise Covariance Matrices by Yulong Huang
+        //orkf4Update(res);  // Scaling filter by G Chang  Robust Kalman filtering based on Mahalanobis distance as outlier judging criterion
         //orkf5Update(res);  // Adaptive filter by Akhlaghi  https://arxiv.org/pdf/1702.00884.pdf
-        //orkf6Update(res);  // A Novel Adaptive Kalman Filter with Inaccurate Process and Measurement Noise Covariance Matrices by Yulong Huang
+        //orkf6Update(res);  // Covariance Scaling filter by Yang Adaptively robust filtering for kinematic geodetic positioning
+
 
         ins_att_ = CoreNav::dcm_to_eul((Eigen::MatrixXd::Identity(3,3)- CoreNav::skew_symm(error_states_.segment(0,3)))*Cn2bUnc.transpose());
         ins_pos_ = ins_pos_ - error_states_.segment(6,3);
@@ -653,6 +654,7 @@ void CoreNav::UpdateR(Eigen::RowVectorXd res){
       if (scale < 1.0){
           R_ = cov_min;
           iceclass.icefunc(res,ind);
+          iceclass.is_outlier = false;
       }
       // inflate  the R_ matrix if outlier
       else{
@@ -660,6 +662,7 @@ void CoreNav::UpdateR(Eigen::RowVectorXd res){
           //R_ = (scale -1)*H_*P_*H_.transpose()+ scale*cov_min;
           iceclass.res_count +=1 ;
           iceclass.merging(res);
+          iceclass.is_outlier = true;
       }
 }
 void CoreNav::huberUpdate(){
@@ -695,7 +698,7 @@ void CoreNav::huberUpdate(){
         typedef Eigen::Matrix<double, 19, 1> Vector19d;
         Vector19d omeg;
 
-        double delta = 2.0;
+        double delta = 1.5;
 
         Eigen::VectorXd error_states_prev = error_states_;
         double diff(100.0);
@@ -743,10 +746,20 @@ void CoreNav::adaptiveUpdate(Eigen::RowVectorXd res){
 
       if (scale < 1.0){
         normalUpdate(res);
+        //huberUpdate();
       }
-      else{
-        huberUpdate();
-      }
+      // else{
+      //   continue;
+        // MatrixXd R_post(4,4);
+        // R_post = (scale -1)*H_*P_*H_.transpose()+ scale*R_;
+        // R_ = R_post;
+        //normalUpdate(res);
+        //huberUpdate();
+
+        // K_ << P_*H_.transpose()*(H_*P_*H_.transpose()+ R_post).inverse();
+        // error_states_ = error_states_+K_*res.transpose();
+        // P_= (Eigen::MatrixXd::Identity(15,15) - K_*H_) * P_ * ( Eigen::MatrixXd::Identity(15,15) - K_ * H_ ).transpose() + K_ * R_post * K_.transpose();
+      // }
 }
 void CoreNav::orkf1Update(Eigen::RowVectorXd res){
 
@@ -754,9 +767,7 @@ void CoreNav::orkf1Update(Eigen::RowVectorXd res){
 
       ROS_INFO_ONCE(" Running variational filter ");
       double likelihood = 0.0;
-
-      double threshold = 0.9;
-      int dof1 = 350;
+      int dof1 = 250;
       //Matrix4f cov = R_.cast<float>();
       // cov << 1, 0, 0, 0,
       //        0, 1, 0, 0,
@@ -766,7 +777,7 @@ void CoreNav::orkf1Update(Eigen::RowVectorXd res){
       MatrixXd R_post(4,4);
       //R_post = R_sample;
       // R_post = (K_k -1)*H_*P_*H_.transpose()+ K_k*R_;
-      for (int i = 0; i < 20; i++){
+      for (int i = 0; i < 5; i++){
 
           res = Z_-H_*error_states_ ;
           R_post = (dof1*R_ + res.transpose()*res + H_*P_*H_.transpose())/(dof1+1);
@@ -790,19 +801,19 @@ void CoreNav::orkf1DriftUpdate(Eigen::RowVectorXd res){
 
         ROS_INFO_ONCE(" Running variational filter ");
         // double likelihood = 0.0;
-        double threshold = 0.9;
+        //double threshold = 0.9;
         double rho; //forgetting factor
 
-        if (rearVel_ > 0){
-          rho = 0.0001;
-        }
-        else{
-          rho = 0.0000001;
-        }
+        // if (rearVel_ > 0){
+        //   rho = 0.00001;
+        // }
+        // else{
+        rho = 0.0000001;
+        // }
 
         int d = 4;
 
-        for (int i = 0; i < 20; i++){
+        for (int i = 0; i < 5; i++){
 
             res = Z_-H_*error_states_ ;
 
@@ -830,14 +841,14 @@ void CoreNav::orkf2Update(Eigen::RowVectorXd res){
         int L = 15;
         double alpha = 1; //1e-3< alpha <= 1
         double beta = 2;
-        double k = 3;
+        double k = 0;
         double lambda = std::pow(alpha,2)*(L + k) - L;
         double gamma = std::pow(L + lambda, 0.5);
         double w0_m = lambda/(L+lambda);
         double w0_c = w0_m + (1 - std::pow(alpha,2) + beta);
-        double neu = 4; // parameter for gamma prior for lambda
+        double neu = 300; // parameter for gamma prior for lambda
         double d = 4;
-        int N = 10;
+        int N = 5;
         int n = 15; //Dimension of the state
         double lambda2 = 1;
 
@@ -898,27 +909,57 @@ void CoreNav::orkf2Update(Eigen::RowVectorXd res){
 }
 void CoreNav::orkf3Update(Eigen::RowVectorXd res){
 
-        //Covariance Scaling filter by Yang Adaptively robust filtering for kinematic geodetic positioning
+      //iid noise Variational Filter by Agememnoni An outlier robust Kalman Filter
 
-        ROS_INFO_ONCE(" Running covariance-scaling filter ");
-        MatrixXd R_post(4,4);
-        R_post = R_;
-        double delta = 1.5;
+      ROS_INFO_ONCE(" Running variational filter ");
+      // int n = 15;
+      int m = 4;
 
-        for (int i=0; i < 4; i++){
-            if (std::abs(res(i)/std::pow(R_(i,i),0.5)) <= delta){
-                R_post(i,i) = R_(i,i);
-            }
-            else {
-              R_post(i,i) = R_(i,i)*(delta/std::abs(res(i)/std::pow(R_(i,i),0.5)));
-            }
-        }
+      if (rearVel_ > 0){
+        rho = 0.99999;
+      }
+      else{
+        rho = 1;
+      }
 
-        K_ << P_*H_.transpose()*(H_*P_*H_.transpose()+R_post).inverse();
-        error_states_ = error_states_+K_*res.transpose();
-        P_= (Eigen::MatrixXd::Identity(15,15) - K_*H_) * P_ * ( Eigen::MatrixXd::Identity(15,15) - K_ * H_ ).transpose() + K_ * R_post * K_.transpose();
+      u = rho*(u-m-1) + m + 1;
+      U = rho*U;
+      CoreNav::Matrix A;
+      MatrixXd R_post(4,4);
+      Eigen::Matrix<double, 4, 4> B;
 
-}
+      // if (rearVel_ > 0){
+      tau = 2000;
+      // }
+      // else{
+      //   tau = 10;
+      // }
+
+      t = num_states_ + tau +1;
+      T = tau*P_;
+
+      CoreNav::Vector15 error_states_post = error_states_;
+
+      for (int i = 0; i < 3; i++){  //variational iteration
+
+          A = P_ + (error_states_post - error_states_)*(error_states_post - error_states_).transpose();
+          t = t + 1;
+          T = A + T;
+          B = (Z_-H_*error_states_post)*(Z_-H_*error_states_post).transpose() + H_*P_*H_.transpose();
+          u = u + 1;
+          U = B + U;
+          P_ = T/(t - num_states_ -1);
+          R_post = U/(u -m -1);
+          K_ << P_*H_.transpose()*(H_*P_*H_.transpose()+R_post).inverse();
+          error_states_post = error_states_+K_*(Z_-H_*error_states_);
+          P_= (Eigen::MatrixXd::Identity(15,15) - K_*H_) * P_ * ( Eigen::MatrixXd::Identity(15,15) - K_ * H_ ).transpose() + K_ * R_post* K_.transpose();
+      }
+
+      error_states_ = error_states_post;
+      cout << " Done all iterations " << endl;
+
+
+  }
 void CoreNav::orkf4Update(Eigen::RowVectorXd res){
 
         //Another scaling filter by G Chang  Robust Kalman filtering based on Mahalanobis distance as outlier judging criterion
@@ -965,57 +1006,28 @@ void CoreNav::orkf5Update(Eigen::RowVectorXd res){
 }
 void CoreNav::orkf6Update(Eigen::RowVectorXd res){
 
-      //iid noise Variational Filter by Agememnoni An outlier robust Kalman Filter
+        //Covariance Scaling filter by Yang Adaptively robust filtering for kinematic geodetic positioning
 
-      ROS_INFO_ONCE(" Running variational filter ");
-      // int n = 15;
-      int m = 4;
+        ROS_INFO_ONCE(" Running covariance-scaling filter ");
+        MatrixXd R_post(4,4);
+        R_post = R_;
+        double delta = 1.5;
 
-      if (rearVel_ > 0){
-        rho = 0.99999;
-      }
-      else{
-        rho = 1;
-      }
+        for (int i=0; i < 4; i++){
+            if (std::abs(res(i)/std::pow(R_(i,i),0.5)) <= delta){
+                R_post(i,i) = R_(i,i);
+            }
+            else {
+              R_post(i,i) = R_(i,i)*(delta/std::abs(res(i)/std::pow(R_(i,i),0.5)));
+            }
+        }
 
-      u = rho*(u-m-1) + m + 1;
-      U = rho*U;
-      CoreNav::Matrix A;
-      MatrixXd R_post(4,4);
-      Eigen::Matrix<double, 4, 4> B;
+        K_ << P_*H_.transpose()*(H_*P_*H_.transpose()+R_post).inverse();
+        error_states_ = error_states_+K_*res.transpose();
+        P_= (Eigen::MatrixXd::Identity(15,15) - K_*H_) * P_ * ( Eigen::MatrixXd::Identity(15,15) - K_ * H_ ).transpose() + K_ * R_post * K_.transpose();
 
-      // if (rearVel_ > 0){
-      tau = 350;
-      // }
-      // else{
-      //   tau = 1;
-      // }
+}
 
-      t = num_states_ + tau +1;
-      T = tau*P_;
-
-      CoreNav::Vector15 error_states_post = error_states_;
-
-      for (int i = 0; i < 5; i++){  //variational iteration
-
-          A = P_ + (error_states_post - error_states_)*(error_states_post - error_states_).transpose();
-          t = t + 1;
-          T = A + T;
-          B = (Z_-H_*error_states_post)*(Z_-H_*error_states_post).transpose() + H_*P_*H_.transpose();
-          u = u + 1;
-          U = B + U;
-          P_ = T/(t - num_states_ -1);
-          R_post = U/(u -m -1);
-          K_ << P_*H_.transpose()*(H_*P_*H_.transpose()+R_post).inverse();
-          error_states_post = error_states_+K_*(Z_-H_*error_states_);
-          P_= (Eigen::MatrixXd::Identity(15,15) - K_*H_) * P_ * ( Eigen::MatrixXd::Identity(15,15) - K_ * H_ ).transpose() + K_ * R_post* K_.transpose();
-      }
-
-      error_states_ = error_states_post;
-      cout << " Done all iterations " << endl;
-
-
-  }
 // CALLBACKS
 
 bool CoreNav::RegisterCallbacks(const ros::NodeHandle& n){
@@ -1414,8 +1426,8 @@ bool CoreNav::Init(const ros::NodeHandle& n){
   error_states_ = Eigen::VectorXd::Zero(num_states_);
 
           // // Construct initial P matrix, Diagonal P
-          dof = 25;
-          dof_prev = 30;
+          //dof = 25;
+          dof_prev = 250;
           P_= Eigen::MatrixXd::Zero(num_states_,num_states_);
           P_pred=Eigen::MatrixXd::Zero(num_states_,num_states_);
 
@@ -1446,10 +1458,10 @@ bool CoreNav::Init(const ros::NodeHandle& n){
           R_<< 25*R_1*R_2*R_1.transpose();
           //R_drift = dof*R_;
           R_drift_prev = dof_prev*R_;
-          u  = 350; // try higher than 500 or try with higher tau
+          u  = 2000; // try higher than 500 or try with higher tau
           U = R_*(u - 5);  //R_*(u -m -1)
           //T = tau*P_;
-          tau = 10;   //VBAKF [ paper suggests 2 -6 ]
+          tau = 500;   //VBAKF [ paper suggests 2 -6 ]
           rho = 0.999; //VBAKF
           // int n = 15; // dimension of state
           //int m = 4;  // dimension of measuremnet

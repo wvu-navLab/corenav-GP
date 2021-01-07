@@ -24,11 +24,11 @@ ICEclass::ICEclass(){          // residuals in corenav are 4 dimensional
   is_outlier = false;
   res_count = -1;
   all_res_count = 0;
-  for (int k =0; k<500; k++){
+  for (int k =0; k<300; k++){
     num_obs.push_back(0);
   };
 
-  residuals.setZero(500,4);
+  residuals.setZero(300,4);
 
   // How to initialize the globalMixtureModel ?
 
@@ -57,6 +57,7 @@ ICEclass::ICEclass(){          // residuals in corenav are 4 dimensional
 
 void ICEclass::icefunc(Eigen::RowVectorXd res, int ind){
 
+//adding the inlier to the correct component
           num_obs.at(ind) = num_obs.at(ind)+1;
 
         }
@@ -69,7 +70,7 @@ void ICEclass::merging(Eigen::RowVectorXd res){
                     // cout << "The residual matrix -- before merging " << "\n" << residuals << "\n" << endl;
             residuals.block(res_count,0,1,4) = res;
 
-            if (res_count == 499){
+            if (res_count == 299){
                   StickBreak weights;
                   vector<GaussWish> clusters;
                   Eigen::MatrixXd qZ;
@@ -88,7 +89,7 @@ void ICEclass::merging(Eigen::RowVectorXd res){
                   // cout << " --------------------------- Resetting the residuals matrix , looking for new batch of residuals ------------------------------- \n\n" << endl;
 
 
-                  (residuals).setZero(500,4); // reset residuals matrix and the res count
+                  (residuals).setZero(300,4); // reset residuals matrix and the res count
                   res_count = -1;
           }
 

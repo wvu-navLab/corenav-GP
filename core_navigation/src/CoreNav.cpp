@@ -218,10 +218,10 @@ void CoreNav::Update(){
         //huberUpdate();  // Huber filter (Karlgraad)
         //normalUpdate(res); // Standard filter (Cagri)
         //adaptiveUpdate(res);
-        //orkf1Update(res);  // iid noise Variational Filter by Agememnoni An outlier robust Kalman Filter
+        orkf1Update(res);  // iid noise Variational Filter by Agememnoni An outlier robust Kalman Filter
         //orkf1DriftUpdate(res);  // drifting noise Variational Filter by Agememnoni An outlier robust Kalman Filter
         //orkf2Update(res);  // Variational Filter by Sarkka Recursive outlier-robust filtering and smoothing for nonlinear systems using the multivariate Student-t distribution
-        orkf3Update(res);  // A Novel Adaptive Kalman Filter with Inaccurate Process and Measurement Noise Covariance Matrices by Yulong Huang
+        //orkf3Update(res);  // A Novel Adaptive Kalman Filter with Inaccurate Process and Measurement Noise Covariance Matrices by Yulong Huang
         //orkf4Update(res);  // Scaling filter by G Chang  Robust Kalman filtering based on Mahalanobis distance as outlier judging criterion
         //orkf5Update(res);  // Adaptive filter by Akhlaghi  https://arxiv.org/pdf/1702.00884.pdf
         //orkf6Update(res);  // Covariance Scaling filter by Yang Adaptively robust filtering for kinematic geodetic positioning
@@ -761,6 +761,46 @@ void CoreNav::adaptiveUpdate(Eigen::RowVectorXd res){
         // P_= (Eigen::MatrixXd::Identity(15,15) - K_*H_) * P_ * ( Eigen::MatrixXd::Identity(15,15) - K_ * H_ ).transpose() + K_ * R_post * K_.transpose();
       // }
 }
+void CoreNav::orkf1DriftUpdate(Eigen::RowVectorXd res){
+
+        // Drifting noise Variational Filter by Agememnoni An outlier robust Kalman Filter
+
+        ROS_INFO_ONCE(" Running variational filter ");
+        // double likelihood = 0.0;
+        //double threshold = 0.9;
+        double rho; //forgetting factor
+
+        // if (rearVel_ > 0){
+        //   rho = 0.00001;
+        // }
+        // else{
+        rho = 0.00001;
+        // }
+
+        int d = 4;
+
+        for (int i = 0; i < 5; i++){
+
+            res = Z_-H_*error_states_ ;
+
+            R_drift = (1 -rho)*R_drift_prev + res.transpose()*res + H_*P_*H_.transpose();
+            dof = (1 - rho)*dof_prev + rho*(d-1) + 1;
+
+            K_ << P_*H_.transpose()*(H_*P_*H_.transpose()+ (R_drift/dof)).inverse();
+            error_states_ = error_states_+K_*(Z_-H_*error_states_);
+            P_= (Eigen::MatrixXd::Identity(15,15) - K_*H_) * P_ * ( Eigen::MatrixXd::Identity(15,15) - K_ * H_ ).transpose() + K_ * (R_drift/dof) * K_.transpose();
+
+            // double quad = res*(R_drift/dof).inverse()*res.transpose();
+            // likelihood = std::pow((1 + quad/dof), -(dof+1)/2);
+
+            std::cout << " dof --  " << dof << endl;
+        }
+
+        cout << " Done all iterations " << endl;
+        R_drift_prev = R_drift;
+        dof_prev = dof;
+
+ }
 void CoreNav::orkf1Update(Eigen::RowVectorXd res){
 
       //iid noise Variational Filter by Agememnoni An outlier robust Kalman Filter
@@ -795,46 +835,6 @@ void CoreNav::orkf1Update(Eigen::RowVectorXd res){
       cout << " Done all iterations " << endl;
 
   }
-void CoreNav::orkf1DriftUpdate(Eigen::RowVectorXd res){
-
-        // Drifting noise Variational Filter by Agememnoni An outlier robust Kalman Filter
-
-        ROS_INFO_ONCE(" Running variational filter ");
-        // double likelihood = 0.0;
-        //double threshold = 0.9;
-        double rho; //forgetting factor
-
-        // if (rearVel_ > 0){
-        //   rho = 0.00001;
-        // }
-        // else{
-        rho = 0.0000001;
-        // }
-
-        int d = 4;
-
-        for (int i = 0; i < 5; i++){
-
-            res = Z_-H_*error_states_ ;
-
-            R_drift = (1 -rho)*R_drift_prev + res.transpose()*res + H_*P_*H_.transpose();
-            dof = (1 - rho)*dof_prev + rho*(d-1) + 1;
-
-            K_ << P_*H_.transpose()*(H_*P_*H_.transpose()+ (R_drift/dof)).inverse();
-            error_states_ = error_states_+K_*(Z_-H_*error_states_);
-            P_= (Eigen::MatrixXd::Identity(15,15) - K_*H_) * P_ * ( Eigen::MatrixXd::Identity(15,15) - K_ * H_ ).transpose() + K_ * (R_drift/dof) * K_.transpose();
-
-            // double quad = res*(R_drift/dof).inverse()*res.transpose();
-            // likelihood = std::pow((1 + quad/dof), -(dof+1)/2);
-
-            std::cout << " dof --  " << dof << endl;
-        }
-
-        cout << " Done all iterations " << endl;
-        R_drift_prev = R_drift;
-        dof_prev = dof;
-
- }
 void CoreNav::orkf2Update(Eigen::RowVectorXd res){
 
         //Variational Filter by Sarkka Recursive outlier-robust filtering and smoothing for nonlinear systems using the multivariate Student-t distribution
@@ -940,7 +940,7 @@ void CoreNav::orkf3Update(Eigen::RowVectorXd res){
 
       CoreNav::Vector15 error_states_post = error_states_;
 
-      for (int i = 0; i < 3; i++){  //variational iteration
+      for (int i = 0; i < 5; i++){  //variational iteration
 
           A = P_ + (error_states_post - error_states_)*(error_states_post - error_states_).transpose();
           t = t + 1;
@@ -989,19 +989,15 @@ void CoreNav::orkf4Update(Eigen::RowVectorXd res){
 void CoreNav::orkf5Update(Eigen::RowVectorXd res){
 
         // Adaptive filter by Akhlaghi  https://arxiv.org/pdf/1702.00884.pdf
-        double alpha = 0.05;  //fading factor
-
-        K_ << P_*H_.transpose()*(H_*P_*H_.transpose()+R_).inverse();
-
-        error_states_ = error_states_+K_*res.transpose();
-
-        Eigen::RowVectorXd residual(4);
-
-        residual = Z_-H_*error_states_ ;
-
+        double alpha = 0.8;  //fading factor
         R_ = alpha*R_ + (1 - alpha)*(residual.transpose()*residual +  H_*P_*H_.transpose());
+        error_states_ = error_states_+K_*res.transpose();
+        // K_ << P_*H_.transpose()*(H_*P_*H_.transpose()+R_).inverse();
         K_ << P_*H_.transpose()*(H_*P_*H_.transpose()+R_).inverse();
         P_= (Eigen::MatrixXd::Identity(15,15) - K_*H_) * P_ * ( Eigen::MatrixXd::Identity(15,15) - K_ * H_ ).transpose() + K_ * R_ * K_.transpose();
+
+        residual = Z_-H_*error_states_ ; //post-fit residual
+
         //Q_ = alpha*Q_ + (1-alpha)*K_*res.transpose()*res*K_.transpose();
 }
 void CoreNav::orkf6Update(Eigen::RowVectorXd res){
@@ -1423,11 +1419,15 @@ bool CoreNav::Initialize(const ros::NodeHandle& n){
 }
 bool CoreNav::Init(const ros::NodeHandle& n){
 
-  error_states_ = Eigen::VectorXd::Zero(num_states_);
+          error_states_ = Eigen::VectorXd::Zero(num_states_);
 
           // // Construct initial P matrix, Diagonal P
           //dof = 25;
-          dof_prev = 250;
+          dof_prev = 100;
+          Eigen::RowVectorXd vec2(4);
+          vec2 << 0.0,0.0,0.0,0.0;
+          residual = vec2; //initializing post-fit residuals
+
           P_= Eigen::MatrixXd::Zero(num_states_,num_states_);
           P_pred=Eigen::MatrixXd::Zero(num_states_,num_states_);
 

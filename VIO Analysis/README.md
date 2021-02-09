@@ -13,7 +13,7 @@ Slip-Based Autonomous ZUPT through Gaussian Process to Improve Planetary Rover P
 
 ## Architecture
 <p align="center">
-<img alt="architecture" src="docs/framework.png" width="700">
+<img alt="architecture" src="docs/Slide1.PNG" width="700">
 </p>        
 
 **Keywords:** Mars Sample Return, planetary rovers, time series prediction, slip, zero velocity update, rover localization

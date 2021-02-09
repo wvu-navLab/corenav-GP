@@ -8,7 +8,7 @@ Supplementary Visual-Inertial Odometry (VIO) Analyses in low-feature environment
 
 The VIO solution is generated using ROS Wrapper for Intel® RealSense™ Devices https://github.com/IntelRealSense/realsense-ros
 
-Each figure provides a DGPS solution, filter estimation (corenav-GP solution), 2D Dead Reckoning (only WO and IMU heading). The Google Map representation of the ground truth (DGPS) solution is provided to visualize the low-feature environment (Point Marion, PA, Ashpiles Mars Analog Environment).
+Each figure provides a DGPS solution, filter estimation (corenav-GP solution), 2D Dead Reckoning (only WO and IMU heading). The Google Map representation of the ground truth (DGPS) solution is provided to visualize the low-feature environment (Point Marion, PA, Ashpiles Mars Analog Environment). Solution accuracy values are given for the corenav-GP implementation.
  
 ## Scenario 1
 <p align="center">

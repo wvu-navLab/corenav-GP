@@ -17,7 +17,7 @@ The first figure shows the kernel function(s) representation against the same sl
 
 After careful consideration through mathematical expressions of the kernels, field tests, and simulation analyses, we have selected two kernel functions: Brownian Kernel to model random, high impulsive slippage, and Radial Basis Function Kernel to model continuous similar slip values. Then we have built the composite kernel model to capture both slippage behaviors during traversal as shown in second figure.
 
-## Selected Composite Kernel
+## Selected Composite Kernel (RBF * Brownian)
 <p align="center">
 <img alt="architecture" src="docs/ours.jpg" width="700">
 </p>        

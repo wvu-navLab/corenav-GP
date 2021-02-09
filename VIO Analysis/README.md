@@ -12,32 +12,32 @@ Each figure provides a DGPS solution, filter estimation (corenav-GP solution), 2
  
 ## Scenario 1
 <p align="center">
-<img alt="architecture" src="docs/Slide1.PNG" width="700">
+<img alt="architecture" src="docs/scenario1.PNG" width="700">
 </p>        
 
 
 ## Scenario 2
 <p align="center">
-<img alt="architecture" src="docs/Slide2.PNG" width="700">
+<img alt="architecture" src="docs/scenario2.PNG" width="700">
 </p>        
 
 
 
 ## Scenario 3
 <p align="center">
-<img alt="architecture" src="docs/Slide4.PNG" width="700">
+<img alt="architecture" src="docs/scenario3.PNG" width="700">
 </p>        
 
 
 ## Scenario 4
 <p align="center">
-<img alt="architecture" src="docs/Slide5.PNG" width="700">
+<img alt="architecture" src="docs/scenario4.PNG" width="700">
 </p>        
 
 
 ## Scenario 5
 <p align="center">
-<img alt="architecture" src="docs/Slide6.PNG" width="700">
+<img alt="architecture" src="docs/scenario5.PNG" width="700">
 </p>        
 
 

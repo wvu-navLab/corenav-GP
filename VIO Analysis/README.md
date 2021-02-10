@@ -38,7 +38,7 @@ The median values (out of 3 execution) of RMSE for CoreNav-GP are E=1.03m, N=0.4
 
 The median values (out of 3 execution) of RMSE for VIO are E=2.70m, N=12.22*, U=2.12m 
 
-In Execution 1, there is only 124m/150m traversing values. After 124m, VIO failed and outputs NaN values. For this reason, the star (*) values show the accuracy until 124 m.
+In Execution 1, there is only 124m out of 150m traversed solution for VIO. After 124m, VIO failed and outputs NaN values. For this reason, the star (*) values show the accuracy until 124 m.
 
 
 ### Additional Scenario 1

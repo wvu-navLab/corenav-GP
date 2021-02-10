@@ -46,7 +46,7 @@ In Execution 1, there is only 124m out of 150m traversed solution for VIO. After
 <img alt="architecture" src="docs/scenario4.PNG" width="700">
 </p>        
 
-The values of RMSE for CoreNav-GP are E=0.65m, N=0.40m, U=2.89m
+The values of RMSE for CoreNav-GP are E=0.66m, N=0.40m, U=2.89m
 
 The  values of RMSE for VIO are E=13.27m, N=56.62m, U=2.12m 
 
@@ -55,7 +55,7 @@ The  values of RMSE for VIO are E=13.27m, N=56.62m, U=2.12m
 <img alt="architecture" src="docs/scenario5.PNG" width="700">
 </p>   
 
-The values of RMSE for CoreNav-GP are E=1.22m, N=2.50m, U=1.97m 
+The values of RMSE for CoreNav-GP are E=1.23m, N=2.51m, U=1.97m 
 
 The values of RMSE for VIO are E=44.04m, N=27.24m, U=0.42m     
 

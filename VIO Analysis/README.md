@@ -15,6 +15,7 @@ Each figure provides a DGPS solution, filter estimation (corenav-GP solution), 2
 <img alt="architecture" src="docs/scenario1.PNG" width="700">
 </p>        
 
+*VIO failed after traversing 124m
 
 ### Scenario 1, Execution 2
 <p align="center">

@@ -33,10 +33,9 @@ Each figure provides a DGPS solution, filter estimation (corenav-GP solution), 2
 <img alt="architecture" src="docs/scene1.PNG" width="300">
 </p>        
 
-Out of 3 execution, 
 
-The median values of RMSE for CoreNav-GP are E=1.03m, N=0.49m, U=0.65m
-The median values of RMSE for VIO are E=2.70m, N=12.22*, U=2.12m 
+The median values (out of 3 execution) of RMSE for CoreNav-GP are E=1.03m, N=0.49m, U=0.65m
+The median values (out of 3 execution) of RMSE for VIO are E=2.70m, N=12.22*, U=2.12m 
 
 In Execution 1, there is only 124m/150m traversing values. After 124m, VIO failed and outputs NaN values. For this reason, the star (*) values show the accuracy until 124 m.
 

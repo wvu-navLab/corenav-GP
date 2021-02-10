@@ -55,8 +55,8 @@ The  values of RMSE for VIO are E=13.27m, N=56.62m, U=2.12m
 <img alt="architecture" src="docs/scenario5.PNG" width="700">
 </p>   
 
-The values of RMSE for CoreNav-GP are E=44.04m, N=27.24m, U=0.42m
+The values of RMSE for CoreNav-GP are E=1.22m, N=2.50m, U=1.97m 
 
-The values of RMSE for VIO are E=2.70m, N=12.22*, U=2.12m      
+The values of RMSE for VIO are E=44.04m, N=27.24m, U=0.42m     
 
 

@@ -66,7 +66,7 @@ add_executable(${PROJECT_NAME}_node src/${PROJECT_NAME}.cpp)
 target_link_libraries(${PROJECT_NAME}
   ${catkin_LIBRARIES}
   #${PROJECT_NAME} /home/ck/corenav_dev/src/corenav-GP/libcluster/lib/libcluster.so
-  ${PROJECT_NAME} /home/navlabsd/robust_ws/src/corenav-GP/libcluster/lib/libcluster.so
+  ${PROJECT_NAME} /home/navlab-shounak/robust_ws/src/corenav-GP/libcluster/lib/libcluster.so
 
 )
 target_link_libraries(${PROJECT_NAME}_node

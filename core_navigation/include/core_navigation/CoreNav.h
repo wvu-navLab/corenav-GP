@@ -53,7 +53,6 @@
 #include <core_nav/GP_Input.h>
 #include <core_nav/GP_Output.h>
 #include <std_msgs/Float64.h>
-#include <core_navigation/ICEclass.h>
 #include <std_msgs/Float32MultiArray.h>
 #include <std_msgs/MultiArrayDimension.h>
 class CoreNav {
@@ -300,9 +299,7 @@ public:
         int countZero=0;
         double xy_errSlip;
         double odomUptCount, startRecording, stopRecording, saveCountOdom;
-        ICEclass iceclass;
         Eigen::RowVectorXd residual;
-        Eigen::RowVectorXd ice_mean;
         ros::Time imuTime;
 
 };

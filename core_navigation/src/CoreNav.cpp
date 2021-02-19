@@ -8,7 +8,6 @@
 #include <geometry_msgs/TransformStamped.h>
 #include <hw_interface_plugin_roboteq/RoboteqData.h>
 #include <unsupported/Eigen/MatrixFunctions>
-#include <core_navigation/ICEclass.h>
 //#include <EigenRand/EigenRand>
 #include <std_msgs/Float32MultiArray.h>
 #include <std_msgs/MultiArrayDimension.h>
@@ -213,7 +212,6 @@ void CoreNav::Update(){
         //  ADD UPDATE FUNCTION HERE  // *********************************************************
       //****************************************************************************************
 
-        //UpdateR(res);  // updating R with ICE (Ryan)
         //res = res-ice_mean;
         //huberUpdate();  // Huber filter (Karlgraad)
         //normalUpdate(res); // Standard filter (Cagri)
@@ -606,65 +604,7 @@ void CoreNav::normalUpdate(Eigen::RowVectorXd res){
         P_= (Eigen::MatrixXd::Identity(15,15) - K_*H_) * P_ * ( Eigen::MatrixXd::Identity(15,15) - K_ * H_ ).transpose() + K_ * R_ * K_.transpose();
 
 }
-void CoreNav::UpdateR(Eigen::RowVectorXd res){
 
-      // Incremental  Covariance Estimation  -- Ryan
-        std::vector<mixtureComponents> globalMixtureModelLatest = iceclass.globalMixtureModel;
-
-        int ind(0);
-        double prob, probMax(0.0);
-        Eigen::MatrixXd cov_min(4,4);     //TODO: is the size okay ?
-        Eigen::RowVectorXd mean_min(4);
-
-        for(int k=0; k<globalMixtureModelLatest.size();k++){
-
-            merge::mixtureComponents mixtureComp = globalMixtureModelLatest[k];
-
-            auto cov = mixtureComp.get<4>();
-
-            Eigen::RowVectorXd mean = mixtureComp.get<3>();
-
-            double quadform  = (res-mean)* (mixtureComp.get<4>()).inverse() * (res-mean).transpose();
-            double norm = std::pow(std::sqrt(2 * M_PI),-1) * std::pow((mixtureComp.get<4>()).determinant(), -0.5);
-
-            prob = (norm) * exp(-0.5 * quadform);  // select best component
-
-            if (prob >= probMax)
-            {
-                    ind = k;
-                    probMax = prob;
-                    cov_min = mixtureComp.get<4>();
-                    mean_min = mixtureComp.get<3>();
-            }
-          }
-
-      R_ = cov_min;
-      ice_mean = mean_min;
-      iceclass.all_res_count +=1 ;
-      Eigen::RowVectorXd resdiff(4);
-      resdiff = res-ice_mean;
-
-      // checking for inlier or outlier
-      double mahalcost(0.0);
-      mahalcost = resdiff*(H_*P_*H_.transpose()+R_).inverse()*resdiff.transpose();
-      double critical_valchi4 = 9.488;
-
-      double scale = mahalcost/critical_valchi4;
-
-      if (scale < 1.0){
-          R_ = cov_min;
-          iceclass.icefunc(res,ind);
-          iceclass.is_outlier = false;
-      }
-      // inflate  the R_ matrix if outlier
-      else{
-          R_ = cov_min;
-          //R_ = (scale -1)*H_*P_*H_.transpose()+ scale*cov_min;
-          iceclass.res_count +=1 ;
-          iceclass.merging(res);
-          iceclass.is_outlier = true;
-      }
-}
 void CoreNav::huberUpdate(){
 
   //Huber filter (Karlgraad) Non-linear Regression HUber-Kalman Filtering and Fixed-Interval Smoothing

@@ -6,9 +6,9 @@
 
 Methods Implemented :
 
-`huberUpdate()` -- [C.  D.  Karlgaard,  “Nonlinear  regression  huber–kalman  filtering  andfixed-interval smoothing,” 2015.](https://arc.aiaa.org/doi/full/10.2514/1.G000799?casa_token=vJibT0LXw48AAAAA:xFXdIWjlgYGfgTpuOERFESNJXJdbVxEW1Xtz9FCeIJPFbH2SG4mTcKfAO3tJeerMWdnjZR_sIUNO)
-
 `normalUpdate()` -- [C.  Kilic,  J.  N.  Gross,  N.  Ohi,  R.  Watson,  J.  Strader,  T.  Swiger,S.  Harper,  and  Y.  Gu,  “Improved  planetary  rover  inertial  navigationand  wheel  odometry  performance  through  periodic  use  of  zero-typeconstraints, ” 2019](https://arxiv.org/pdf/1906.08849)
+
+`huberUpdate()` -- [C.  D.  Karlgaard,  “Nonlinear  regression  huber–kalman  filtering  andfixed-interval smoothing,” 2015.](https://arc.aiaa.org/doi/full/10.2514/1.G000799?casa_token=vJibT0LXw48AAAAA:xFXdIWjlgYGfgTpuOERFESNJXJdbVxEW1Xtz9FCeIJPFbH2SG4mTcKfAO3tJeerMWdnjZR_sIUNO)
 
 `orkf1Update()` -- [G.  Agamennoni,  J.  I.  Nieto,  and  E.  M.  Nebot, "Approximate inference in state-space models with heavy-tailed noise," 2012](https://ieeexplore.ieee.org/iel5/78/4359509/06266757.pdf?casa_token=wgvggTT8YwsAAAAA:LOLzYFTTlcgaUUktIRNWbkGIzKDU6Fu-3RQRI4J_hrsTrJHQDerhpp7uCZuhzbrqBOCvESg6NRs)
 

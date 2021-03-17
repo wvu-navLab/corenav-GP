@@ -9,7 +9,7 @@
 Affiliation: [WVU NAVLAB](https://navigationlab.wvu.edu/)<br />
 Maintainer: Cagri Kilic, cakilic@mix.wvu.edu**
 
-Slip-Based Autonomous ZUPT through Gaussian Process to Improve Planetary Rover Proprioceptive Localization
+Slip-Based Autonomous ZUPT through Gaussian Process to Improve Planetary Rover Localization
 
 ## Architecture
 <p align="center">
@@ -50,4 +50,4 @@ If you find this library useful, please cite the following publication:
         }
 
 
-**[3]** Cagri Kilic, Nicholas Ohi, Yu Gu, Jason N. Gross: **Slip-Based Autonomous ZUPT through Gaussian Process to Improve Planetary Rover Proprioceptive Localization**.
+**[3]** Cagri Kilic, Nicholas Ohi, Yu Gu, Jason N. Gross: **Slip-Based Autonomous ZUPT through Gaussian Process to Improve Planetary Rover Localization**.

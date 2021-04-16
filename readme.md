@@ -4,6 +4,8 @@
 
 #### A comparison of robust kalman filters for improving wheel-inertial odometry in planetary rovers
 
+main code implementation inside :`core_navigation/src`
+
 Methods Implemented :
 
 `normalUpdate()` -- [C.  Kilic,  J.  N.  Gross,  N.  Ohi,  R.  Watson,  J.  Strader,  T.  Swiger,S.  Harper,  and  Y.  Gu,  “Improved  planetary  rover  inertial  navigationand  wheel  odometry  performance  through  periodic  use  of  zero-typeconstraints, ” 2019](https://arxiv.org/pdf/1906.08849)

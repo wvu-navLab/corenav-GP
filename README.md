@@ -25,7 +25,7 @@ If you find this library useful, please cite the following publication:
 
 **[1]** Cagri Kilic, Nicholas Ohi, Yu Gu, Jason N. Gross: **Slip-Based Autonomous ZUPT through Gaussian Process to Improve Planetary Rover Localization**. IEEE Robotics and Automation Letters (RA-L), 2021. https://doi.org/10.1109/LRA.2021.3068893 
 
-        @article{Kilic2020,
+        @article{Kilic2021,
           author={Kilic, Cagri and Ohi, Nicholas and and Gu, Yu and Gross, Jason N},
           journal={IEEE Robotics and Automation Letters}, 
           title={Slip-Based Autonomous ZUPT through Gaussian Process to Improve Planetary Rover Localization}, 

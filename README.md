@@ -30,9 +30,9 @@ If you find this library useful, please cite the following publication:
           journal={IEEE Robotics and Automation Letters}, 
           title={Slip-Based Autonomous ZUPT through Gaussian Process to Improve Planetary Rover Localization}, 
           year={2021},
-          volume={},
-          number={},
-          pages={1-1},
+          volume={6},
+          number={3},
+          pages={4782-4789},
           doi={10.1109/LRA.2021.3068893}
           }
 

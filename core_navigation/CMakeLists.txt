@@ -5,7 +5,7 @@ set (CMAKE_CXX_STANDARD 11)
 
 
 find_package(catkin REQUIRED COMPONENTS
-  hw_interface_plugin_roboteq
+  #hw_interface_plugin_roboteq
   roscpp
   geometry_utils
   parameter_utils
@@ -15,7 +15,7 @@ find_package(catkin REQUIRED COMPONENTS
   tf
   std_msgs
   message_generation
-  libcluster
+  #libcluster
 )
 
 add_message_files(

@@ -11,6 +11,8 @@
 //#include <EigenRand/EigenRand>
 #include <std_msgs/Float32MultiArray.h>
 #include <std_msgs/MultiArrayDimension.h>
+#include <iostream>
+using namespace std;
 
 namespace pu = parameter_utils;
 namespace gu = geometry_utils;
@@ -148,7 +150,7 @@ void CoreNav::Propagate(){
         // covar = P_.block(3,3,6,6);
         // cout << covar << endl;
         // cout <<"***---------***"<< endl;
-        PublishStateswCov(llhstate, enu_pub_);
+        // PublishStateswCov(llhstate, enu_pub_);
         PublishStatesenu(ins_cn_,enu_pub2_);
         PublishStates(ins_xyz_, ins_xyz_pub_);
         PublishStates(ins_pos_llh_, pos_llh_pub_);
@@ -216,9 +218,9 @@ void CoreNav::Update(){
         //huberUpdate();  // Huber filter (Karlgraad)
         //normalUpdate(res); // Standard filter (Cagri)
         //adaptiveUpdate(res);
-        orkf1Update(res);  // iid noise Variational Filter by Agememnoni An outlier robust Kalman Filter
+        //orkf1Update(res);  // iid noise Variational Filter by Agememnoni An outlier robust Kalman Filter
         //orkf1DriftUpdate(res);  // drifting noise Variational Filter by Agememnoni An outlier robust Kalman Filter
-        //orkf2Update(res);  // Variational Filter by Sarkka Recursive outlier-robust filtering and smoothing for nonlinear systems using the multivariate Student-t distribution
+        orkf2Update(res);  // Variational Filter by Sarkka Recursive outlier-robust filtering and smoothing for nonlinear systems using the multivariate Student-t distribution
         //orkf3Update(res);  // A Novel Adaptive Kalman Filter with Inaccurate Process and Measurement Noise Covariance Matrices by Yulong Huang
         //orkf4Update(res);  // Scaling filter by G Chang  Robust Kalman filtering based on Mahalanobis distance as outlier judging criterion
         //orkf5Update(res);  // Adaptive filter by Akhlaghi  https://arxiv.org/pdf/1702.00884.pdf
@@ -615,7 +617,7 @@ void CoreNav::huberUpdate(){
         epCov.block<15,15>(0,0) = P_;
         epCov.block<4,4>(15,15) = R_;
 
-        Eigen::LLT<MatrixXd> lltofcov(epCov);
+        Eigen::LLT<Eigen::MatrixXd> lltofcov(epCov);
 
         Eigen::MatrixXd S = lltofcov.matrixL();
 
@@ -643,7 +645,7 @@ void CoreNav::huberUpdate(){
         Eigen::VectorXd error_states_prev = error_states_;
         double diff(100.0);
         error_states_prev =  ((X.transpose()*X).inverse())*(X.transpose()*Y);
-        DiagonalMatrix<double, 19 > M;
+        Eigen::DiagonalMatrix<double, 19 > M;
         int iter(0);
         double weight(1);
         while ((diff > 0.000001) && (iter <10)){                              // iterative re-weighted least squares
@@ -747,14 +749,14 @@ void CoreNav::orkf1Update(Eigen::RowVectorXd res){
 
       ROS_INFO_ONCE(" Running variational filter ");
       double likelihood = 0.0;
-      int dof1 = 250;
+      int dof1 = 10;
       //Matrix4f cov = R_.cast<float>();
       // cov << 1, 0, 0, 0,
       //        0, 1, 0, 0,
       //        0, 0, 1, 0,
       //        0, 0, 0, 1;
       //sampleR(s,cov);
-      MatrixXd R_post(4,4);
+      Eigen::MatrixXd R_post(4,4);
       //R_post = R_sample;
       // R_post = (K_k -1)*H_*P_*H_.transpose()+ K_k*R_;
       for (int i = 0; i < 5; i++){
@@ -786,7 +788,7 @@ void CoreNav::orkf2Update(Eigen::RowVectorXd res){
         double gamma = std::pow(L + lambda, 0.5);
         double w0_m = lambda/(L+lambda);
         double w0_c = w0_m + (1 - std::pow(alpha,2) + beta);
-        double neu = 300; // parameter for gamma prior for lambda
+        double neu = 10; // parameter for gamma prior for lambda
         double d = 4;
         int N = 5;
         int n = 15; //Dimension of the state
@@ -808,7 +810,7 @@ void CoreNav::orkf2Update(Eigen::RowVectorXd res){
 
           CoreNav::Matrix P_sqrt(15,15);
           cout << " Calculating square root ... " << endl;
-          Eigen::LLT<MatrixXd> lltofcov(P_);
+          Eigen::LLT<Eigen::MatrixXd> lltofcov(P_);
           Eigen::MatrixXd S = lltofcov.matrixL();
           P_sqrt = gamma*S; //calculate the square root of the covariance matrix
           cout << " Done " << endl;
@@ -827,7 +829,7 @@ void CoreNav::orkf2Update(Eigen::RowVectorXd res){
 
           cout << "Done with pushbacks " <<  endl;
           // now calculate the expected value of the measurement noise matrix with respect to the posterior distribution
-          MatrixXd R_post(4,4);
+          Eigen::MatrixXd R_post(4,4);
           R_post << 0.0,0.0,0.0,0.0,
           0.0,0.0,0.0,0.0,
           0.0,0.0,0.0,0.0,
@@ -865,7 +867,7 @@ void CoreNav::orkf3Update(Eigen::RowVectorXd res){
       u = rho*(u-m-1) + m + 1;
       U = rho*U;
       CoreNav::Matrix A;
-      MatrixXd R_post(4,4);
+      Eigen::MatrixXd R_post(4,4);
       Eigen::Matrix<double, 4, 4> B;
 
       // if (rearVel_ > 0){
@@ -918,7 +920,7 @@ void CoreNav::orkf4Update(Eigen::RowVectorXd res){
           K_k = scale;
         }
 
-        MatrixXd R_post(4,4);
+        Eigen::MatrixXd R_post(4,4);
         R_post = (K_k -1)*H_*P_*H_.transpose()+ K_k*R_;
 
         K_ << P_*H_.transpose()*(H_*P_*H_.transpose()+ R_post).inverse();
@@ -945,7 +947,7 @@ void CoreNav::orkf6Update(Eigen::RowVectorXd res){
         //Covariance Scaling filter by Yang Adaptively robust filtering for kinematic geodetic positioning
 
         ROS_INFO_ONCE(" Running covariance-scaling filter ");
-        MatrixXd R_post(4,4);
+        Eigen::MatrixXd R_post(4,4);
         R_post = R_;
         double delta = 1.5;
 

@@ -146,10 +146,6 @@ void CoreNav::Propagate(){
         PublishStates(ins_vel_, velocity_pub_);
         PublishStates(ins_pos_, position_pub_);
 
-        // Eigen::MatrixXd covar(6,6);
-        // covar = P_.block(3,3,6,6);
-        // cout << covar << endl;
-        // cout <<"***---------***"<< endl;
         // PublishStateswCov(llhstate, enu_pub_);
         PublishStatesenu(ins_cn_,enu_pub2_);
         PublishStates(ins_xyz_, ins_xyz_pub_);
@@ -518,7 +514,6 @@ CoreNav::Vector3 CoreNav::dcm_to_eul(CoreNav::Matrix3 dcm){
 }
 CoreNav::Vector3 CoreNav::llh_to_enu(double lat, double lon, double height){
 
-
         double phi = lat;
         double lambda = lon;
         double h = height;
@@ -618,30 +613,23 @@ void CoreNav::huberUpdate(){
         epCov.block<4,4>(15,15) = R_;
 
         Eigen::LLT<Eigen::MatrixXd> lltofcov(epCov);
-
         Eigen::MatrixXd S = lltofcov.matrixL();
-
         Eigen::MatrixXd Sinv  = S.inverse();
 
         Eigen::MatrixXd F(19,1);
-
         F.block<15,1>(0,0) = error_states_;
         F.block<4,1>(15,0) = Z_;
 
         Eigen::MatrixXd Y = Sinv*F;
 
         Eigen::MatrixXd X(19,15);
-
         X.block<15,15>(0,0) = Eigen::MatrixXd::Identity(15,15);
         X.block<4,15>(15,0) = H_;
-
         X = Sinv*X;
 
         typedef Eigen::Matrix<double, 19, 1> Vector19d;
         Vector19d omeg;
-
         double delta = 1.5;
-
         Eigen::VectorXd error_states_prev = error_states_;
         double diff(100.0);
         error_states_prev =  ((X.transpose()*X).inverse())*(X.transpose()*Y);
@@ -649,26 +637,20 @@ void CoreNav::huberUpdate(){
         int iter(0);
         double weight(1);
         while ((diff > 0.000001) && (iter <10)){                              // iterative re-weighted least squares
-
-        for (int i = 0; i < 19; i++){
-          if ( (Y(i) - X.row(i)*error_states_) != 0.0 ){
-            //if ( i > 14){  // Only thresholding the measurements
-              omeg(i) = derivcost((Y(i) - X.row(i)*error_states_prev), delta)/(Y(i) - X.row(i)*error_states_);
-            //  }
+            for (int i = 0; i < 19; i++){
+              if ( (Y(i) - X.row(i)*error_states_) != 0.0 ){
+                  omeg(i) = derivcost((Y(i) - X.row(i)*error_states_prev), delta)/(Y(i) - X.row(i)*error_states_);
+                }
+              else{
+                omeg(i) = 1;
+              }
             }
-          else{
-            omeg(i) = 1;
-            //cout << "Omeg is 1" << endl;
-          }
-        }
 
-        M = omeg.asDiagonal();
-        error_states_ = ((X.transpose()*M*X).inverse())*(X.transpose()*M*Y);
-        iter = iter +1;
-        //cout << "Iteration Number " << iter << endl;
-
-        diff = (error_states_ - error_states_prev).norm();
-        error_states_prev = error_states_;
+            M = omeg.asDiagonal();
+            error_states_ = ((X.transpose()*M*X).inverse())*(X.transpose()*M*Y);
+            iter = iter +1;
+            diff = (error_states_ - error_states_prev).norm();
+            error_states_prev = error_states_;
       }
 
       if ((diff < 0.000001)|| (iter >= 10)){
@@ -677,15 +659,15 @@ void CoreNav::huberUpdate(){
 
       P_ = (X.transpose()*M*X).inverse();
 }
+
 void CoreNav::adaptiveUpdate(Eigen::RowVectorXd res){
 
-      //res = res - ice_mean;
+      // NOT DISCUSSED IN THE PAPER
+
       double mahalcost(0.0);
       mahalcost = res*(H_*P_*H_.transpose()+R_).inverse()*res.transpose();
       double critical_valchi4 = 9.488;
-
       double scale = mahalcost/critical_valchi4;
-
       if (scale < 1.0){
         normalUpdate(res);
         //huberUpdate();
@@ -703,31 +685,20 @@ void CoreNav::adaptiveUpdate(Eigen::RowVectorXd res){
         // P_= (Eigen::MatrixXd::Identity(15,15) - K_*H_) * P_ * ( Eigen::MatrixXd::Identity(15,15) - K_ * H_ ).transpose() + K_ * R_post * K_.transpose();
       // }
 }
+
 void CoreNav::orkf1DriftUpdate(Eigen::RowVectorXd res){
 
         // Drifting noise Variational Filter by Agememnoni An outlier robust Kalman Filter
 
         ROS_INFO_ONCE(" Running variational filter ");
-        // double likelihood = 0.0;
-        //double threshold = 0.9;
         double rho; //forgetting factor
-
-        // if (rearVel_ > 0){
-        //   rho = 0.00001;
-        // }
-        // else{
         rho = 0.00001;
-        // }
-
         int d = 4;
-
         for (int i = 0; i < 5; i++){
 
             res = Z_-H_*error_states_ ;
-
             R_drift = (1 -rho)*R_drift_prev + res.transpose()*res + H_*P_*H_.transpose();
             dof = (1 - rho)*dof_prev + rho*(d-1) + 1;
-
             K_ << P_*H_.transpose()*(H_*P_*H_.transpose()+ (R_drift/dof)).inverse();
             error_states_ = error_states_+K_*(Z_-H_*error_states_);
             P_= (Eigen::MatrixXd::Identity(15,15) - K_*H_) * P_ * ( Eigen::MatrixXd::Identity(15,15) - K_ * H_ ).transpose() + K_ * (R_drift/dof) * K_.transpose();
@@ -742,7 +713,8 @@ void CoreNav::orkf1DriftUpdate(Eigen::RowVectorXd res){
         R_drift_prev = R_drift;
         dof_prev = dof;
 
- }
+}
+
 void CoreNav::orkf1Update(Eigen::RowVectorXd res){
 
       //iid noise Variational Filter by Agememnoni An outlier robust Kalman Filter
@@ -750,33 +722,20 @@ void CoreNav::orkf1Update(Eigen::RowVectorXd res){
       ROS_INFO_ONCE(" Running variational filter ");
       double likelihood = 0.0;
       int dof1 = 10;
-      //Matrix4f cov = R_.cast<float>();
-      // cov << 1, 0, 0, 0,
-      //        0, 1, 0, 0,
-      //        0, 0, 1, 0,
-      //        0, 0, 0, 1;
-      //sampleR(s,cov);
       Eigen::MatrixXd R_post(4,4);
-      //R_post = R_sample;
-      // R_post = (K_k -1)*H_*P_*H_.transpose()+ K_k*R_;
-      for (int i = 0; i < 5; i++){
 
+      for (int i = 0; i < 5; i++){
           res = Z_-H_*error_states_ ;
           R_post = (dof1*R_ + res.transpose()*res + H_*P_*H_.transpose())/(dof1+1);
-
           K_ << P_*H_.transpose()*(H_*P_*H_.transpose()+R_post).inverse();
           error_states_ = error_states_+K_*(Z_-H_*error_states_);
           P_= (Eigen::MatrixXd::Identity(15,15) - K_*H_) * P_ * ( Eigen::MatrixXd::Identity(15,15) - K_ * H_ ).transpose() + K_ * R_post * K_.transpose();
-
-          // double quad = res*R_post.inverse()*res.transpose();
-          // likelihood = std::pow((1 + quad/dof), -(dof+1)/2);
-          //
-          // std::cout << "Likelihood value --  " << likelihood << endl;
       }
 
       cout << " Done all iterations " << endl;
 
-  }
+}
+
 void CoreNav::orkf2Update(Eigen::RowVectorXd res){
 
         //Variational Filter by Sarkka Recursive outlier-robust filtering and smoothing for nonlinear systems using the multivariate Student-t distribution
@@ -814,10 +773,7 @@ void CoreNav::orkf2Update(Eigen::RowVectorXd res){
           Eigen::MatrixXd S = lltofcov.matrixL();
           P_sqrt = gamma*S; //calculate the square root of the covariance matrix
           cout << " Done " << endl;
-          // cout << P_sqrt << endl;
           for(int j = 0; j < 15; j++){
-            //cout << j << endl;
-
             CoreNav::Vector15 sig_error_state1, sig_error_state2;
 
             sig_error_state1 = error_states_ + P_sqrt.col(j);
@@ -837,26 +793,21 @@ void CoreNav::orkf2Update(Eigen::RowVectorXd res){
 
           cout <<" calculating R " << endl;
           for(int i = 0; i < sigma_pts.size(); i++){
-            // cout << i << endl;
             res = Z_-H_*sigma_pts[i];
             R_post = R_post + weights_c[i]*res.transpose()*res;
           }
-
-          // cout << R_post << endl;
           lambda2 = (neu + d )/(neu + (R_post*R_.inverse()).trace());
           cout << "Calculating lambda - " << lambda2 << endl;
 
         }
-
 }
+
 void CoreNav::orkf3Update(Eigen::RowVectorXd res){
 
       //A Novel Adaptive Kalman Filter with Inaccurate Process and Measurement Noise Covariance Matrices by Yulong Huang
 
       ROS_INFO_ONCE(" Running variational filter ");
-      // int n = 15;
       int m = 4;
-
       if (rearVel_ > 0){
         rho = 0.99999;
       }
@@ -870,13 +821,7 @@ void CoreNav::orkf3Update(Eigen::RowVectorXd res){
       Eigen::MatrixXd R_post(4,4);
       Eigen::Matrix<double, 4, 4> B;
 
-      // if (rearVel_ > 0){
       tau = 2000;
-      // }
-      // else{
-      //   tau = 10;
-      // }
-
       t = num_states_ + tau +1;
       T = tau*P_;
 
@@ -901,7 +846,7 @@ void CoreNav::orkf3Update(Eigen::RowVectorXd res){
       cout << " Done all iterations " << endl;
 
 
-  }
+}
 void CoreNav::orkf4Update(Eigen::RowVectorXd res){
 
         //Another scaling filter by G Chang  Robust Kalman filtering based on Mahalanobis distance as outlier judging criterion
@@ -909,7 +854,6 @@ void CoreNav::orkf4Update(Eigen::RowVectorXd res){
         double mahalcost(0.0);
         mahalcost = res*(H_*P_*H_.transpose()+R_).inverse()*res.transpose();
         double critical_valchi4 = 9.488;
-
         double K_k;
         double scale = mahalcost/critical_valchi4;
 
@@ -922,7 +866,6 @@ void CoreNav::orkf4Update(Eigen::RowVectorXd res){
 
         Eigen::MatrixXd R_post(4,4);
         R_post = (K_k -1)*H_*P_*H_.transpose()+ K_k*R_;
-
         K_ << P_*H_.transpose()*(H_*P_*H_.transpose()+ R_post).inverse();
         error_states_ = error_states_+K_*res.transpose();
         P_= (Eigen::MatrixXd::Identity(15,15) - K_*H_) * P_ * ( Eigen::MatrixXd::Identity(15,15) - K_ * H_ ).transpose() + K_ * R_post * K_.transpose();
@@ -934,14 +877,12 @@ void CoreNav::orkf5Update(Eigen::RowVectorXd res){
         double alpha = 0.8;  //fading factor
         R_ = alpha*R_ + (1 - alpha)*(residual.transpose()*residual +  H_*P_*H_.transpose());
         error_states_ = error_states_+K_*res.transpose();
-        // K_ << P_*H_.transpose()*(H_*P_*H_.transpose()+R_).inverse();
         K_ << P_*H_.transpose()*(H_*P_*H_.transpose()+R_).inverse();
         P_= (Eigen::MatrixXd::Identity(15,15) - K_*H_) * P_ * ( Eigen::MatrixXd::Identity(15,15) - K_ * H_ ).transpose() + K_ * R_ * K_.transpose();
-
         residual = Z_-H_*error_states_ ; //post-fit residual
-
         //Q_ = alpha*Q_ + (1-alpha)*K_*res.transpose()*res*K_.transpose();
 }
+
 void CoreNav::orkf6Update(Eigen::RowVectorXd res){
 
         //Covariance Scaling filter by Yang Adaptively robust filtering for kinematic geodetic positioning
@@ -1012,6 +953,7 @@ void CoreNav::OdoCallback(const OdoData& odo_data_){
         }
         return;
 }
+
 void CoreNav::JointCallBack(const JointData& joint_data_){
   joint = getJointData(joint_data_);
   has_joint_ = true;
@@ -1028,6 +970,7 @@ void CoreNav::JointCallBack(const JointData& joint_data_){
   }
   return;
 }
+
 void CoreNav::ImuCallback(const ImuData& imu_dataAdis_){
         imu = getImuData(imu_dataAdis_);
         has_imu_ = true;
@@ -1051,21 +994,25 @@ void CoreNav::ImuCallback(const ImuData& imu_dataAdis_){
         }
         return;
 }
+
 void CoreNav::CmdCallBack(const CmdData& cmd_data_){
         cmd = getCmdData(cmd_data_);
         has_cmd_ = true;
         return;
 }
+
 void CoreNav::EncoderLeftCallBack(const EncoderLeftData& encoderLeft_data_){
         encoderLeft = getEncoderLeftData(encoderLeft_data_);
         has_encoderLeft_ = true;
         return;
 }
+
 void CoreNav::EncoderRightCallBack(const EncoderRightData& encoderRight_data_){
         encoderRight = getEncoderRightData(encoderRight_data_);
         has_encoderRight_ = true;
         return;
 }
+
 CoreNav::Vector13 CoreNav::getOdoData(const OdoData& odo_data_){
 
 CoreNav::Vector13 odoVec( (Vector(13) << odo_data_.pose.pose.position.x,
@@ -1084,6 +1031,7 @@ CoreNav::Vector13 odoVec( (Vector(13) << odo_data_.pose.pose.position.x,
 
         return odoVec;
 }
+
 CoreNav::Vector4 CoreNav::getJointData(const JointData& joint_data_){
         CoreNav::Vector4 jointVec((Vector(4) << joint_data_.velocity[0],
                                    joint_data_.velocity[1],
@@ -1091,6 +1039,7 @@ CoreNav::Vector4 CoreNav::getJointData(const JointData& joint_data_){
                                    joint_data_.velocity[3] ).finished());
         return jointVec;
 }
+
 CoreNav::Vector6 CoreNav::getImuData(const ImuData& imu_dataAdis_){
         CoreNav::Vector6 imuVec((Vector(6) << imu_dataAdis_.linear_acceleration.x,
                                  imu_dataAdis_.linear_acceleration.y,
@@ -1100,6 +1049,7 @@ CoreNav::Vector6 CoreNav::getImuData(const ImuData& imu_dataAdis_){
                                  imu_dataAdis_.angular_velocity.z).finished());
         return imuVec;
 }
+
 CoreNav::Vector CoreNav::getCmdData(const CmdData& cmd_data_){
         CoreNav::Vector3 cmdVec((Vector(3) << cmd_data_.linear.x,
                                    cmd_data_.linear.y,
@@ -1123,16 +1073,19 @@ CoreNav::Vector CoreNav::getCmdData(const CmdData& cmd_data_){
         }
         return cmdVec;
 }
+
 CoreNav::Vector2 CoreNav::getEncoderLeftData(const EncoderLeftData& encoderLeft_data_){
         CoreNav::Vector2 encoderLeftVec((Vector(2) << encoderLeft_data_.encoder_counter_absolute[0],
                                    encoderLeft_data_.encoder_counter_absolute[1]).finished());
         return encoderLeftVec;
 }
+
 CoreNav::Vector2 CoreNav::getEncoderRightData(const EncoderRightData& encoderRight_data_){
         CoreNav::Vector2 encoderRightVec((Vector(2) << encoderRight_data_.encoder_counter_absolute[0],
                                    encoderRight_data_.encoder_counter_absolute[1]).finished());
         return encoderRightVec;
 }
+
 // PUBLISHERS
 void CoreNav::PublishStates(const CoreNav::Vector3& states,const ros::Publisher& pub){
         // // Check for subscribers before doing any work.
@@ -1149,6 +1102,7 @@ void CoreNav::PublishStates(const CoreNav::Vector3& states,const ros::Publisher&
 
         pub.publish(msg);
 }
+
 void CoreNav::PublishStateswCov(const CoreNav::Vector6& states,const ros::Publisher& pub){
         // // Check for subscribers before doing any work.
         if(pub.getNumSubscribers() == 0)
@@ -1183,6 +1137,7 @@ void CoreNav::PublishStateswCov(const CoreNav::Vector6& states,const ros::Publis
 
         pub.publish(CNmsg);
 }
+
 void CoreNav::PublishStatesenu(const CoreNav::Vector9& states,const ros::Publisher& pub){
         // // Check for subscribers before doing any work.
         if(pub.getNumSubscribers() == 0)
@@ -1209,6 +1164,7 @@ void CoreNav::PublishStatesenu(const CoreNav::Vector9& states,const ros::Publish
 
         pub.publish(CNmsg);
 }
+
 void CoreNav::PublishStatesSlip(const CoreNav::Vector3& slip_states,const ros::Publisher& slip_pub){
         // // Check for subscribers before doing any work.
         if(slip_pub.getNumSubscribers() == 0)
@@ -1224,6 +1180,7 @@ void CoreNav::PublishStatesSlip(const CoreNav::Vector3& slip_states,const ros::P
 
         slip_pub.publish(msg);
 }
+
 void CoreNav::PublishStatesCN(const CoreNav::Vector9& cn_states,const ros::Publisher& cn_pub_){
         // // Check for subscribers before doing any work.
         if(cn_pub_.getNumSubscribers() == 0)
@@ -1253,6 +1210,7 @@ void CoreNav::PublishStatesCN(const CoreNav::Vector9& cn_states,const ros::Publi
 
         cn_pub_.publish(CNmsg);
 }
+
 void CoreNav::PublishRes(Eigen::RowVectorXd res,const ros::Publisher& pub){
         // // Check for subscribers before doing any work.
         if(pub.getNumSubscribers() == 0)
@@ -1265,6 +1223,7 @@ void CoreNav::PublishRes(Eigen::RowVectorXd res,const ros::Publisher& pub){
         }
         pub.publish(msg);
 }
+
 // INITIALIZATION
 bool CoreNav::LoadParameters(const ros::NodeHandle& n){
         // Load frame ids.
@@ -1338,6 +1297,7 @@ bool CoreNav::LoadParameters(const ros::NodeHandle& n){
         // ROS_INFO("Loaded Parameters\n");
         return true;
 }
+
 bool CoreNav::Initialize(const ros::NodeHandle& n){
         name_ = ros::names::append(n.getNamespace(), "CoreNav");
 
@@ -1359,6 +1319,7 @@ bool CoreNav::Initialize(const ros::NodeHandle& n){
 
         return true;
 }
+
 bool CoreNav::Init(const ros::NodeHandle& n){
 
           error_states_ = Eigen::VectorXd::Zero(num_states_);
@@ -1460,20 +1421,3 @@ bool CoreNav::Init(const ros::NodeHandle& n){
           bool first_driving_flag = true;
           return true;
 }
-
-// void CoreNav::sampleR(Eigen::Matrix4f covmat){
-//
-//       Eigen::Rand::Vmt19937_64 urng{ 42 };
-//       auto gen3 = Eigen::Rand::makeWishartGen(dof, covmat);
-//
-//       //generates one sample ( shape (4, 4) )
-//       Eigen::Matrix4f sample = gen3.generate(urng);
-//       Eigen::Matrix4d sampleD = sample.cast<double>();
-//       R_sample = sampleD;
-//
-// }
-
-// void CoreNav::rodUpdate(){
-//   //Ting Robust Outlier Detection
-//
-// }
